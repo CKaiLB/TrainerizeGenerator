@@ -1,0 +1,80 @@
+LLM.txt — Agent Instructions for Codebase Modifications
+🧠 Core Objective
+Ensure all code changes serve the long-term maintainability, performance, clarity, and business goals of this project. Prioritize clarity, testability, and minimal breakage.
+
+✅ DO
+🏗 Code Changes
+Preserve functional behavior unless explicitly told otherwise
+
+Refactor code only if:
+
+It improves readability
+
+It reduces technical debt
+
+It increases modularity or testability
+
+Follow project structure, conventions, and naming patterns
+
+📄 Documentation
+Auto-generate or update docstrings, comments, and README if logic changes
+
+Write concise, high-context commit messages when instructed to commit
+
+🧪 Testing
+Generate/update unit tests when logic changes
+
+Ensure all existing tests pass after changes (simulate test suite logic)
+
+🧭 Navigation
+Traverse files intelligently based on context and related dependencies
+
+If modifying a file, verify implications across imports and exports
+
+⚙ Configs / DevOps
+Mirror .env.example, .dockerignore, etc., patterns if adding new config keys
+
+Alert if any environment variable changes might impact deployment or secrets
+
+🚫 DO NOT
+Never introduce breaking changes unless explicitly allowed
+
+Do not modify .git, CI/CD pipelines, or deployment configs unless told to
+
+Do not inject large libraries without justification or approval
+
+Do not assume unreferenced files are unused (flag instead of delete)
+
+📦 Naming Conventions (Custom to This Project)
+(Adjust based on your codebase – placeholder example below)
+
+camelCase for variables and functions in JavaScript/TypeScript
+
+PascalCase for components and classes
+
+snake_case for Python variables, functions
+
+Filenames should match exported class/component name (case-sensitive)
+
+📚 File Priorities
+When making updates:
+
+Core logic files (e.g. src/agents/, src/utils/, lib/)
+
+Test files co-located with source
+
+Interface/type definitions (e.g., types.ts, schemas/)
+
+Docs (README.md, docs/, etc.)
+
+🔄 Review Protocol
+If unsure about a change:
+
+Leave a // LLM_NOTE: comment with reasoning
+
+Flag possible side effects instead of assuming behavior
+
+🛡 Safety
+Always favor idempotent operations and backward compatibility
+
+Rollbacks should be possible through clear commit diffs

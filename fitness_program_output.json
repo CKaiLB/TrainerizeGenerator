@@ -1,0 +1,171 @@
+{
+  "client_name": "Kai Louie-Badua",
+  "program_name": "16-Week Transformation Program",
+  "start_date": "2025-07-16",
+  "total_weeks": 16,
+  "sections": [
+    {
+      "section_number": 1,
+      "section_name": "Foundation & Assessment",
+      "week_range": "Weeks 1-2",
+      "intensity_level": "Low to moderate",
+      "focus_areas": [
+        "Basic movement patterns",
+        "form assessment",
+        "establishing routine"
+      ],
+      "special_considerations": "Focus on proper form and building confidence",
+      "exercises": [],
+      "prompt_text": "\nClient Profile:\n- Name: Kai Louie-Badua\n- Age: 50 | Height: 5'11 | Weight: 200 lbs\n- Sex: male\n- Activity Level: ['9eb5caae-0cf0-407c-9538-11654fb2076b']\n- Top Goal: To lose weight\n- Goal Classification: Weight Loss\n- Exercise Days: 2 days per week (Saturday, Sunday)\n- Preferred Workout Length: ['0de3cc6c-5754-4a90-90b3-54bbb09ced09']\n- Health Conditions: have low grade prostate cancer. I take thyroid medicine and high blood pressure medication and gout medicine and another medicine for prostate.\n- What's Holding Back: giving in occasionally to breads chips and sweets.\n- Metabolism Rating: 5/10\n- Macro Familiarity: 1/10\n\n\nSection: Foundation & Assessment (Weeks 1-2)\nFocus: Basic movement patterns, form assessment, establishing routine\nIntensity: Low to moderate\nSpecial Considerations: Focus on proper form and building confidence\n\nGenerate 5 exercises that focus on:\n1. Basic movement patterns (squat, hinge, push, pull, carry)\n2. Form assessment and correction\n3. Building confidence and establishing routine\n4. Low-impact, beginner-friendly movements\n5. Exercises that can be easily modified for the client's fitness level\n\nConsider the client's health conditions and current activity level. Focus on exercises that will help establish a solid foundation for the 16-week program.\n"
+    },
+    {
+      "section_number": 2,
+      "section_name": "Building Fundamentals",
+      "week_range": "Weeks 3-4",
+      "intensity_level": "Moderate",
+      "focus_areas": [
+        "Progressive overload",
+        "compound movements",
+        "endurance building"
+      ],
+      "special_considerations": "Introduce more challenging variations",
+      "exercises": [],
+      "prompt_text": "\nClient Profile:\n- Name: Kai Louie-Badua\n- Age: 50 | Height: 5'11 | Weight: 200 lbs\n- Sex: male\n- Activity Level: ['9eb5caae-0cf0-407c-9538-11654fb2076b']\n- Top Goal: To lose weight\n- Goal Classification: Weight Loss\n- Exercise Days: 2 days per week (Saturday, Sunday)\n- Preferred Workout Length: ['0de3cc6c-5754-4a90-90b3-54bbb09ced09']\n- Health Conditions: have low grade prostate cancer. I take thyroid medicine and high blood pressure medication and gout medicine and another medicine for prostate.\n- What's Holding Back: giving in occasionally to breads chips and sweets.\n- Metabolism Rating: 5/10\n- Macro Familiarity: 1/10\n\n\nSection: Building Fundamentals (Weeks 3-4)\nFocus: Progressive overload, compound movements, endurance building\nIntensity: Moderate\nSpecial Considerations: Introduce more challenging variations\n\nGenerate 5 exercises that focus on:\n1. Progressive overload principles\n2. Compound movements that engage multiple muscle groups\n3. Building endurance and work capacity\n4. Introducing more challenging variations of basic movements\n5. Exercises that prepare for more advanced training\n\nFocus on movements that will build strength and endurance while maintaining proper form.\n"
+    },
+    {
+      "section_number": 3,
+      "section_name": "Strength Development",
+      "week_range": "Weeks 5-6",
+      "intensity_level": "Moderate to high",
+      "focus_areas": [
+        "Strength training",
+        "muscle building",
+        "power development"
+      ],
+      "special_considerations": "Focus on compound lifts and progressive overload",
+      "exercises": [],
+      "prompt_text": "\nClient Profile:\n- Name: Kai Louie-Badua\n- Age: 50 | Height: 5'11 | Weight: 200 lbs\n- Sex: male\n- Activity Level: ['9eb5caae-0cf0-407c-9538-11654fb2076b']\n- Top Goal: To lose weight\n- Goal Classification: Weight Loss\n- Exercise Days: 2 days per week (Saturday, Sunday)\n- Preferred Workout Length: ['0de3cc6c-5754-4a90-90b3-54bbb09ced09']\n- Health Conditions: have low grade prostate cancer. I take thyroid medicine and high blood pressure medication and gout medicine and another medicine for prostate.\n- What's Holding Back: giving in occasionally to breads chips and sweets.\n- Metabolism Rating: 5/10\n- Macro Familiarity: 1/10\n\n\nSection: Strength Development (Weeks 5-6)\nFocus: Strength training, muscle building, power development\nIntensity: Moderate to high\nSpecial Considerations: Focus on compound lifts and progressive overload\n\nGenerate 5 exercises that focus on:\n1. Primary compound lifts (squat, deadlift, bench press, overhead press)\n2. Muscle building and hypertrophy\n3. Power development and explosive movements\n4. Progressive overload with heavier weights\n5. Strength-specific training protocols\n\nEmphasize proper form and technique while building strength. Consider the client's goals and current strength level.\n"
+    },
+    {
+      "section_number": 4,
+      "section_name": "Metabolic Conditioning",
+      "week_range": "Weeks 7-8",
+      "intensity_level": "High",
+      "focus_areas": [
+        "Cardiovascular fitness",
+        "fat burning",
+        "metabolic efficiency"
+      ],
+      "special_considerations": "High-intensity intervals and circuit training",
+      "exercises": [],
+      "prompt_text": "\nClient Profile:\n- Name: Kai Louie-Badua\n- Age: 50 | Height: 5'11 | Weight: 200 lbs\n- Sex: male\n- Activity Level: ['9eb5caae-0cf0-407c-9538-11654fb2076b']\n- Top Goal: To lose weight\n- Goal Classification: Weight Loss\n- Exercise Days: 2 days per week (Saturday, Sunday)\n- Preferred Workout Length: ['0de3cc6c-5754-4a90-90b3-54bbb09ced09']\n- Health Conditions: have low grade prostate cancer. I take thyroid medicine and high blood pressure medication and gout medicine and another medicine for prostate.\n- What's Holding Back: giving in occasionally to breads chips and sweets.\n- Metabolism Rating: 5/10\n- Macro Familiarity: 1/10\n\n\nSection: Metabolic Conditioning (Weeks 7-8)\nFocus: Cardiovascular fitness, fat burning, metabolic efficiency\nIntensity: High\nSpecial Considerations: High-intensity intervals and circuit training\n\nGenerate 5 exercises that focus on:\n1. High-intensity interval training (HIIT)\n2. Fat burning and metabolic efficiency\n3. Cardiovascular fitness improvement\n4. Circuit training and supersets\n5. Exercises that elevate heart rate and burn calories\n\nFocus on movements that can be performed in intervals or circuits to maximize metabolic effect.\n"
+    },
+    {
+      "section_number": 5,
+      "section_name": "Advanced Strength",
+      "week_range": "Weeks 9-10",
+      "intensity_level": "High",
+      "focus_areas": [
+        "Advanced strength techniques",
+        "muscle hypertrophy",
+        "power"
+      ],
+      "special_considerations": "Complex movements and advanced techniques",
+      "exercises": [],
+      "prompt_text": "\nClient Profile:\n- Name: Kai Louie-Badua\n- Age: 50 | Height: 5'11 | Weight: 200 lbs\n- Sex: male\n- Activity Level: ['9eb5caae-0cf0-407c-9538-11654fb2076b']\n- Top Goal: To lose weight\n- Goal Classification: Weight Loss\n- Exercise Days: 2 days per week (Saturday, Sunday)\n- Preferred Workout Length: ['0de3cc6c-5754-4a90-90b3-54bbb09ced09']\n- Health Conditions: have low grade prostate cancer. I take thyroid medicine and high blood pressure medication and gout medicine and another medicine for prostate.\n- What's Holding Back: giving in occasionally to breads chips and sweets.\n- Metabolism Rating: 5/10\n- Macro Familiarity: 1/10\n\n\nSection: Advanced Strength (Weeks 9-10)\nFocus: Advanced strength techniques, muscle hypertrophy, power\nIntensity: High\nSpecial Considerations: Complex movements and advanced techniques\n\nGenerate 5 exercises that focus on:\n1. Advanced strength techniques (drop sets, rest-pause, etc.)\n2. Muscle hypertrophy and size gains\n3. Power development and explosive strength\n4. Complex movements and advanced variations\n5. Strength-specific programming\n\nInclude advanced techniques and complex movements that challenge the client's current strength level.\n"
+    },
+    {
+      "section_number": 6,
+      "section_name": "Endurance & Stamina",
+      "week_range": "Weeks 11-12",
+      "intensity_level": "Moderate to high",
+      "focus_areas": [
+        "Muscular endurance",
+        "cardiovascular stamina",
+        "work capacity"
+      ],
+      "special_considerations": "Longer sets and extended cardio sessions",
+      "exercises": [],
+      "prompt_text": "\nClient Profile:\n- Name: Kai Louie-Badua\n- Age: 50 | Height: 5'11 | Weight: 200 lbs\n- Sex: male\n- Activity Level: ['9eb5caae-0cf0-407c-9538-11654fb2076b']\n- Top Goal: To lose weight\n- Goal Classification: Weight Loss\n- Exercise Days: 2 days per week (Saturday, Sunday)\n- Preferred Workout Length: ['0de3cc6c-5754-4a90-90b3-54bbb09ced09']\n- Health Conditions: have low grade prostate cancer. I take thyroid medicine and high blood pressure medication and gout medicine and another medicine for prostate.\n- What's Holding Back: giving in occasionally to breads chips and sweets.\n- Metabolism Rating: 5/10\n- Macro Familiarity: 1/10\n\n\nSection: Endurance & Stamina (Weeks 11-12)\nFocus: Muscular endurance, cardiovascular stamina, work capacity\nIntensity: Moderate to high\nSpecial Considerations: Longer sets and extended cardio sessions\n\nGenerate 5 exercises that focus on:\n1. Muscular endurance and stamina\n2. Cardiovascular endurance\n3. Work capacity and conditioning\n4. Longer duration sets and extended sessions\n5. Exercises that build lasting endurance\n\nFocus on movements that can be performed for longer durations to build endurance and stamina.\n"
+    },
+    {
+      "section_number": 7,
+      "section_name": "Peak Performance",
+      "week_range": "Weeks 13-14",
+      "intensity_level": "Very high",
+      "focus_areas": [
+        "Maximum performance",
+        "advanced techniques",
+        "competition prep"
+      ],
+      "special_considerations": "Peak intensity and advanced programming",
+      "exercises": [],
+      "prompt_text": "\nClient Profile:\n- Name: Kai Louie-Badua\n- Age: 50 | Height: 5'11 | Weight: 200 lbs\n- Sex: male\n- Activity Level: ['9eb5caae-0cf0-407c-9538-11654fb2076b']\n- Top Goal: To lose weight\n- Goal Classification: Weight Loss\n- Exercise Days: 2 days per week (Saturday, Sunday)\n- Preferred Workout Length: ['0de3cc6c-5754-4a90-90b3-54bbb09ced09']\n- Health Conditions: have low grade prostate cancer. I take thyroid medicine and high blood pressure medication and gout medicine and another medicine for prostate.\n- What's Holding Back: giving in occasionally to breads chips and sweets.\n- Metabolism Rating: 5/10\n- Macro Familiarity: 1/10\n\n\nSection: Peak Performance (Weeks 13-14)\nFocus: Maximum performance, advanced techniques, competition prep\nIntensity: Very high\nSpecial Considerations: Peak intensity and advanced programming\n\nGenerate 5 exercises that focus on:\n1. Maximum performance and peak intensity\n2. Advanced techniques and complex movements\n3. Competition preparation and peak conditioning\n4. High-intensity training protocols\n5. Exercises that push limits and maximize results\n\nThis is the most challenging phase - focus on exercises that will push the client to their peak performance level.\n"
+    },
+    {
+      "section_number": 8,
+      "section_name": "Maintenance & Transition",
+      "week_range": "Weeks 15-16",
+      "intensity_level": "Moderate",
+      "focus_areas": [
+        "Maintenance",
+        "skill refinement",
+        "program transition"
+      ],
+      "special_considerations": "Sustain gains and prepare for next phase",
+      "exercises": [],
+      "prompt_text": "\nClient Profile:\n- Name: Kai Louie-Badua\n- Age: 50 | Height: 5'11 | Weight: 200 lbs\n- Sex: male\n- Activity Level: ['9eb5caae-0cf0-407c-9538-11654fb2076b']\n- Top Goal: To lose weight\n- Goal Classification: Weight Loss\n- Exercise Days: 2 days per week (Saturday, Sunday)\n- Preferred Workout Length: ['0de3cc6c-5754-4a90-90b3-54bbb09ced09']\n- Health Conditions: have low grade prostate cancer. I take thyroid medicine and high blood pressure medication and gout medicine and another medicine for prostate.\n- What's Holding Back: giving in occasionally to breads chips and sweets.\n- Metabolism Rating: 5/10\n- Macro Familiarity: 1/10\n\n\nSection: Maintenance & Transition (Weeks 15-16)\nFocus: Maintenance, skill refinement, program transition\nIntensity: Moderate\nSpecial Considerations: Sustain gains and prepare for next phase\n\nGenerate 5 exercises that focus on:\n1. Maintaining gains and progress\n2. Skill refinement and technique improvement\n3. Preparing for program transition\n4. Sustainable training practices\n5. Exercises that can be continued long-term\n\nFocus on exercises that will help maintain progress while preparing for the next phase of training.\n"
+    }
+  ],
+  "created_at": "2025-07-09T23:32:02.493669",
+  "user_context": {
+    "first_name": "Kai",
+    "last_name": "Louie-Badua",
+    "email": "sweepautomation@gmail.com",
+    "phone": "",
+    "social_handle": "",
+    "address": "",
+    "country": "",
+    "date_of_birth": "",
+    "sex_at_birth": "male",
+    "height": "5'11",
+    "weight": "200",
+    "age": 50,
+    "top_fitness_goal": "To lose weight",
+    "goal_classification": [
+      "Weight Loss"
+    ],
+    "holding_back": "giving in occasionally to breads chips and sweets.",
+    "activity_level": [
+      "9eb5caae-0cf0-407c-9538-11654fb2076b"
+    ],
+    "health_conditions": "have low grade prostate cancer. I take thyroid medicine and high blood pressure medication and gout medicine and another medicine for prostate.",
+    "food_allergies": "",
+    "daily_eating_pattern": "",
+    "favorite_foods": "",
+    "disliked_foods": "",
+    "meals_per_day": "",
+    "metabolism_rating": 5,
+    "nutrition_history": "",
+    "macro_familiarity": 1,
+    "exercise_days_per_week": 2,
+    "exercise_days": [
+      "Saturday",
+      "Sunday"
+    ],
+    "preferred_workout_length": [
+      "0de3cc6c-5754-4a90-90b3-54bbb09ced09"
+    ],
+    "start_date": "",
+    "habits_to_destroy": [
+      "Impulsive eating",
+      "Impulsive grocery shopping",
+      "Using being tired as an excuse to not exercise sometimes"
+    ],
+    "habits_to_build": [
+      "Exercising to build up muscle",
+      "Trying to accomplish a task each day.",
+      "Trying to cook more at home even though I'm not fond of cooking"
+    ]
+  }
+}

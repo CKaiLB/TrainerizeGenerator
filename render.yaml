@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: trainerize-fitness-program
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn webhook_server:app"
+    plan: free
+    envVars:
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: TRAINERIZE_FIND
+        sync: false
+      - key: TRAINERIZE_WORKOUT_ADD
+        sync: false
+      - key: TRAINERIZE_PROGRAM_ADD
+        sync: false
+      - key: TRAINERIZE_AUTH
+        sync: false 
