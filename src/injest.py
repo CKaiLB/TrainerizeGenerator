@@ -25,7 +25,7 @@ COLLECTION_NAME = "trainerize_exercises"
 
 # Trainerize API configuration
 TRAINERIZE_API_URL = "https://api.trainerize.com/v03/exercise/get"
-TRAINERIZE_AUTH = "Basic NjMxOTMzOmU3TmlmSkRUVWlSQm5ydE0ycXlB"
+TRAINERIZE_AUTH = os.getenv("TRAINERIZE_AUTH")
 
 client = QdrantClient(
     url=QDRANT_URL,
