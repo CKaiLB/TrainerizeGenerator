@@ -166,7 +166,7 @@ class FitnessProgramOrchestrator:
             print(f"📅 Start Date: {fitness_program.start_date}")
             print(f"⏱️ Duration: {fitness_program.total_weeks} weeks")
             print(f"📊 Created: {fitness_program.created_at}")
-            
+        
             print(f"\n🎯 FOCUS AREAS ({len(fitness_program.focus_areas)}):")
             for i, area in enumerate(fitness_program.focus_areas, 1):
                 print(f"  {i}. {area['area_name']} (Priority: {area['priority_level']})")
@@ -205,17 +205,17 @@ def main():
     try:
         # Test with sample data
         sample_data = {
-            "data": {
-                "fields": [
+        "data": {
+            "fields": [
                     {"key": "question_zMWrpa", "value": "Test"},
                     {"key": "question_59EG66", "value": "User"},
                     {"key": "question_WReGQL", "value": "Weight Loss"},
                     {"key": "question_gqQypM", "value": "3"},
                     {"key": "question_y40KG6", "value": ["Monday", "Wednesday", "Friday"]}
-                ]
-            }
+            ]
         }
-        
+    }
+    
         orchestrator = FitnessProgramOrchestrator()
         program = orchestrator.create_fitness_program(sample_data)
         
