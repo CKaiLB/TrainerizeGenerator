@@ -31,14 +31,14 @@ class FocusAreaExerciseMatcher:
         self.vector_search = VectorSearch()
         logger.info("FocusAreaExerciseMatcher initialized")
     
-    def match_exercises_to_focus_areas(self, focus_areas: List[FitnessFocusArea], exercises_per_area: int = 5, exercise_days_per_week: int = 3, total_weeks: int = 16) -> List[FocusAreaExerciseMatch]:
+    def match_exercises_to_focus_areas(self, focus_areas: List[FitnessFocusArea], exercises_per_area: int = 5, exercise_days_per_week: int = 3) -> List[FocusAreaExerciseMatch]:
         """Match exercises to each focus area using vector search"""
         try:
             logger.info(f"Matching exercises to {len(focus_areas)} focus areas")
             
             all_matches = []
-            exercises_needed_per_area = exercise_days_per_week * total_weeks * exercises_per_area
-            logger.info(f"Each focus area needs {exercises_needed_per_area} exercises (days/week={exercise_days_per_week}, weeks={total_weeks}, exercises/workout={exercises_per_area})")
+            exercises_needed_per_area = exercise_days_per_week * exercises_per_area
+            logger.info(f"Each focus area needs {exercises_needed_per_area} exercises (days/week={exercise_days_per_week}, exercises/workout={exercises_per_area})")
             
             for focus_area in focus_areas:
                 logger.info(f"Searching exercises for focus area: {focus_area.area_name}")
