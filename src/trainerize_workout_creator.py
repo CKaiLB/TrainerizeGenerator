@@ -29,7 +29,7 @@ class TrainerizeWorkoutCreator:
         logger.info("TrainerizeWorkoutCreator initialized")
     
     def create_workout_from_exercises(self, user_id: str, exercises: List[Dict[str, Any]], focus_area: str, workout_name: str, training_plan_id: str = None) -> Dict[str, Any]:
-        """Create a workout in Trainerize from a list of exercises with a unique name"""
+        """Create a workout in Trainerize from a list of exercises with a unique name. Ensures training plan ID is present if expected. (See LLM.txt)"""
         try:
             if not user_id:
                 logger.error("No user ID provided for workout creation")
@@ -66,7 +66,10 @@ class TrainerizeWorkoutCreator:
             # Add training plan ID if provided
             if training_plan_id:
                 api_payload["trainingPlanID"] = training_plan_id
-                logger.info(f"Adding training plan ID: {training_plan_id}")
+                logger.info(f"Adding training plan ID: {training_plan_id} to workout payload")
+            else:
+                # LLM_NOTE: Flag if a workout is created without a training plan ID
+                logger.error(f"Workout for user {user_id} and focus area '{focus_area}' is being created WITHOUT a training plan ID! This should be investigated.")
             
             logger.info(f"Creating workout for user {user_id} with {len(exercise_ids)} exercises")
             logger.info(f"API Payload: {json.dumps(api_payload, indent=2)}")
@@ -84,6 +87,11 @@ class TrainerizeWorkoutCreator:
             if response.status_code == 200:
                 result = response.json()
                 logger.info(f"Successfully created workout for user {user_id}")
+                # LLM_NOTE: Log confirmation that training plan ID was used
+                if not training_plan_id:
+                    logger.error(f"Workout created WITHOUT training plan ID! This is a critical issue.")
+                else:
+                    logger.info(f"Workout created and linked to training plan ID: {training_plan_id}")
                 return {
                     "status": "success",
                     "user_id": user_id,

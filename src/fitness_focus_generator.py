@@ -97,7 +97,7 @@ class FitnessFocusGenerator:
                 user_prompt = self._create_user_context_prompt(user_context)
                 # Call OpenAI API with shorter timeout
                 response = client.chat.completions.create(
-                    model="gpt-4",
+                    model="gpt-4.1-mini",
                     messages=[
                         {"role": "system", "content": self.system_prompt},
                         {"role": "user", "content": user_prompt}
