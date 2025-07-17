@@ -28,8 +28,8 @@ class TrainerizeWorkoutCreator:
         }
         logger.info("TrainerizeWorkoutCreator initialized")
     
-    def create_workout_from_exercises(self, user_id: str, exercises: List[Dict[str, Any]], focus_area: str, week_range: str = "Week (1-2)", training_plan_id: str = None) -> Dict[str, Any]:
-        """Create a workout in Trainerize from a list of exercises"""
+    def create_workout_from_exercises(self, user_id: str, exercises: List[Dict[str, Any]], focus_area: str, workout_name: str, training_plan_id: str = None) -> Dict[str, Any]:
+        """Create a workout in Trainerize from a list of exercises with a unique name"""
         try:
             if not user_id:
                 logger.error("No user ID provided for workout creation")
@@ -53,8 +53,8 @@ class TrainerizeWorkoutCreator:
                 logger.error("No valid exercise IDs found in exercises")
                 return {"error": "No valid exercise IDs found", "status": "failed"}
             
-            # Create workout definition with week range
-            workout_def = self._create_workout_definition(exercise_ids, focus_area, week_range)
+            # Create workout definition with unique name
+            workout_def = self._create_workout_definition(exercise_ids, focus_area, workout_name)
             
             # Create the API payload (ensure userID is correct)
             api_payload = {
@@ -90,7 +90,7 @@ class TrainerizeWorkoutCreator:
                     "workout_id": result.get('id'),
                     "exercises_count": len(exercise_ids),
                     "focus_area": focus_area,
-                    "week_range": week_range,
+                    "workout_name": workout_name,
                     "training_plan_id": training_plan_id,
                     "response": result
                 }
@@ -109,10 +109,9 @@ class TrainerizeWorkoutCreator:
                 "status": "failed"
             }
     
-    def _create_workout_definition(self, exercise_ids: List[str], focus_area: str, week_range: str = "Week (1-2)") -> Dict[str, Any]:
-        """Create the workout definition structure for Trainerize API"""
-        
-        # Create exercise definitions with additional parameters
+    def _create_workout_definition(self, exercise_ids: List[str], focus_area: str, workout_name: str) -> Dict[str, Any]:
+        """Create the workout definition structure for Trainerize API with a unique name"""
+        # LLM_NOTE: Changed to accept unique workout_name for Trainerize API uniqueness
         exercises = []
         for exercise_id in exercise_ids:
             exercise_def = {
@@ -126,39 +125,32 @@ class TrainerizeWorkoutCreator:
                 }
             }
             exercises.append(exercise_def)
-        
-        # Create workout definition with name field
         workout_def = {
             "exercises": exercises,
             "instructions": f"Focus on {focus_area}. Complete all exercises with proper form and controlled movements.",
             "type": "workoutRegular",
-            "name": week_range
+            "name": workout_name
         }
-        
         return workout_def
-    
+
     def create_workouts_for_focus_areas(self, user_id: str, exercise_matches: List[Dict[str, Any]], user_context: Any, exercises_per_workout: int = 5, training_plan_ids: Dict[str, str] = None) -> List[Dict[str, Any]]:
-        """Create workouts for all focus areas, creating multiple workouts per focus area based on user's exercise days"""
+        """Create workouts for all focus areas, using unique user-specific workout names for each day (see LLM.txt)"""
         try:
             if not user_id:
                 logger.error("No user ID provided")
                 return []
-            
             if not exercise_matches:
                 logger.error("No exercise matches provided")
                 return []
-            
-            # Get user's exercise days
             exercise_days_per_week = getattr(user_context, 'exercise_days_per_week', 3)
             exercise_days = getattr(user_context, 'exercise_days', ['Monday', 'Wednesday', 'Friday'])
-            
+            first_name = getattr(user_context, 'first_name', 'User')
+            last_name = getattr(user_context, 'last_name', '')
             logger.info(f"User can workout {exercise_days_per_week} days per week: {exercise_days}")
-            
             # Convert exercise matches to dictionaries if they're objects
             exercise_matches_dict = []
             for match in exercise_matches:
                 if hasattr(match, '__dict__'):
-                    # Convert object to dictionary
                     match_dict = {
                         'focus_area_name': getattr(match, 'focus_area_name', 'Unknown'),
                         'exercise_id': getattr(match, 'exercise_id', ''),
@@ -173,9 +165,7 @@ class TrainerizeWorkoutCreator:
                     }
                     exercise_matches_dict.append(match_dict)
                 else:
-                    # Already a dictionary
                     exercise_matches_dict.append(match)
-            
             # Group exercises by focus area
             grouped_exercises = {}
             for match in exercise_matches_dict:
@@ -183,68 +173,48 @@ class TrainerizeWorkoutCreator:
                 if focus_area not in grouped_exercises:
                     grouped_exercises[focus_area] = []
                 grouped_exercises[focus_area].append(match)
-            
-            # Create workouts for each focus area
             created_workouts = []
-            focus_area_counter = 0  # Track focus areas for week progression
-            
+            total_weeks = 16
+            total_days = exercise_days_per_week * total_weeks
+            global_day_number = 1  # LLM_NOTE: Ensures unique workout names across all focus areas
             for focus_area, exercises in grouped_exercises.items():
-                focus_area_counter += 1
                 logger.info(f"Creating workouts for focus area: {focus_area}")
-                
-                # Calculate week range for this focus area (2 weeks per focus area)
-                week_start = ((focus_area_counter - 1) * 2) + 1
-                week_end = week_start + 1
-                week_range = f"Week ({week_start}-{week_end})"
-                
                 # Get training plan ID for this focus area
                 training_plan_id = None
                 if training_plan_ids and focus_area in training_plan_ids:
                     training_plan_id = training_plan_ids[focus_area]
                     logger.info(f"Using training plan ID {training_plan_id} for focus area {focus_area}")
-                
-                # Create multiple workouts for this focus area (one per exercise day)
-                for day_index, exercise_day in enumerate(exercise_days):
-                    # Calculate starting index for this day's exercises
-                    start_index = day_index * exercises_per_workout
-                    end_index = start_index + exercises_per_workout
-                    
-                    # Get exercises for this day
-                    day_exercises = exercises[start_index:end_index]
-                    
-                    # If we don't have enough exercises for this day, skip
-                    if len(day_exercises) < exercises_per_workout:
-                        logger.warning(f"Not enough exercises for {exercise_day} in {focus_area}. Need {exercises_per_workout}, have {len(day_exercises)}")
-                        continue
-                    
-                    # Create workout name with "Day 1 - Day X" format per focus area
-                    day_number = day_index + 1
-                    workout_name = f"{focus_area} - Day {day_number} - Day {exercise_days_per_week}"
-                    
-                    # Create workout with day-specific naming and training plan ID
-                    result = self.create_workout_from_exercises(
-                        user_id, 
-                        day_exercises, 
-                        focus_area, 
-                        f"Day {day_number} - Day {exercise_days_per_week}",
-                        training_plan_id
-                    )
-                    
-                    if result.get("status") == "success":
-                        result["workout_name"] = workout_name
-                        result["focus_area"] = focus_area
-                        result["exercise_day"] = exercise_day
-                        result["week_range"] = week_range
-                        result["day_number"] = day_number
-                        result["total_days"] = exercise_days_per_week
-                        created_workouts.append(result)
-                        logger.info(f"Created workout: {workout_name}")
-                    else:
-                        logger.error(f"Failed to create workout for {focus_area} - Day {day_number}: {result.get('error')}")
-            
+                for week in range(total_weeks):
+                    for day_index in range(exercise_days_per_week):
+                        # Calculate starting index for this day's exercises
+                        start_index = (week * exercise_days_per_week + day_index) * exercises_per_workout
+                        end_index = start_index + exercises_per_workout
+                        day_exercises = exercises[start_index:end_index]
+                        if len(day_exercises) < exercises_per_workout:
+                            logger.warning(f"Not enough exercises for {focus_area} week {week+1} day {day_index+1}. Need {exercises_per_workout}, have {len(day_exercises)}")
+                            continue
+                        # Unique workout name: '[user full name] day X'
+                        workout_name = f"{first_name} {last_name} day {global_day_number}"
+                        result = self.create_workout_from_exercises(
+                            user_id,
+                            day_exercises,
+                            focus_area,
+                            workout_name,
+                            training_plan_id
+                        )
+                        if result.get("status") == "success":
+                            result["workout_name"] = workout_name
+                            result["focus_area"] = focus_area
+                            result["week_number"] = week + 1
+                            result["day_of_week"] = exercise_days[day_index % len(exercise_days)]
+                            result["global_day_number"] = global_day_number
+                            created_workouts.append(result)
+                            logger.info(f"Created workout: {workout_name}")
+                        else:
+                            logger.error(f"Failed to create workout for {workout_name}: {result.get('error')}")
+                        global_day_number += 1
             logger.info(f"Created {len(created_workouts)} workouts for user {user_id}")
             return created_workouts
-            
         except Exception as e:
             logger.error(f"Error creating workouts for focus areas: {str(e)}")
             return []
