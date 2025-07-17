@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import time
 from typing import Dict, Any, List
 from dataclasses import dataclass
 from openai import OpenAI
@@ -12,8 +13,11 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Configure OpenAI
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Configure OpenAI with timeout
+client = OpenAI(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    timeout=30.0  # 30 second timeout
+)
 
 @dataclass
 class FitnessFocusArea:
@@ -62,55 +66,66 @@ Ensure the focus areas are:
 
     def generate_fitness_focus_areas(self, user_context: UserContext) -> List[FitnessFocusArea]:
         """Generate 8 custom fitness focus areas based on user context"""
-        try:
-            logger.info(f"Generating fitness focus areas for {user_context.first_name} {user_context.last_name}")
-            
-            # Create the user context prompt
-            user_prompt = self._create_user_context_prompt(user_context)
-            
-            # Call OpenAI API using the new client
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.7,
-                max_tokens=2000
-            )
-            
-            # Extract and parse the response
-            response_content = response.choices[0].message.content
-            logger.info("Received response from OpenAI")
-            
-            # Parse the JSON response
-            focus_areas_data = self._parse_openai_response(response_content)
-            
-            # Convert to FitnessFocusArea objects
-            focus_areas = []
-            for area_data in focus_areas_data:
-                focus_area = FitnessFocusArea(
-                    area_name=area_data.get("area_name", ""),
-                    description=area_data.get("description", ""),
-                    priority_level=area_data.get("priority_level", 1),
-                    target_muscle_groups=area_data.get("target_muscle_groups", []),
-                    training_frequency=area_data.get("training_frequency", ""),
-                    intensity_level=area_data.get("intensity_level", "Moderate"),
-                    special_considerations=area_data.get("special_considerations", ""),
-                    expected_outcomes=area_data.get("expected_outcomes", [])
+        max_retries = 3
+        retry_delay = 2
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"Generating fitness focus areas for {user_context.first_name} {user_context.last_name} (attempt {attempt + 1}/{max_retries})")
+                
+                # Create the user context prompt
+                user_prompt = self._create_user_context_prompt(user_context)
+                
+                # Call OpenAI API using the new client with timeout
+                response = client.chat.completions.create(
+                    model="gpt-4",
+                    messages=[
+                        {"role": "system", "content": self.system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=0.7,
+                    max_tokens=2000,
+                    timeout=25.0  #25second timeout for the request
                 )
-                focus_areas.append(focus_area)
-            
-            # Sort by priority level
-            focus_areas.sort(key=lambda x: x.priority_level)
-            
-            logger.info(f"Generated {len(focus_areas)} fitness focus areas")
-            return focus_areas
-            
-        except Exception as e:
-            logger.error(f"Error generating fitness focus areas: {str(e)}")
-            # Return default focus areas as fallback
-            return self._get_default_focus_areas(user_context)
+                
+                # Extract and parse the response
+                response_content = response.choices[0].message.content
+                logger.info("Received response from OpenAI")
+                
+                # Parse the JSON response
+                focus_areas_data = self._parse_openai_response(response_content)
+                
+                # Convert to FitnessFocusArea objects
+                focus_areas = []
+                for area_data in focus_areas_data:
+                    focus_area = FitnessFocusArea(
+                        area_name=area_data.get("area_name", ""),
+                        description=area_data.get("description", ""),
+                        priority_level=area_data.get("priority_level", 1),
+                        target_muscle_groups=area_data.get("target_muscle_groups", []),
+                        training_frequency=area_data.get("training_frequency", ""),
+                        intensity_level=area_data.get("intensity_level", "Moderate"),
+                        special_considerations=area_data.get("special_considerations", ""),
+                        expected_outcomes=area_data.get("expected_outcomes", [])
+                    )
+                    focus_areas.append(focus_area)
+                
+                # Sort by priority level
+                focus_areas.sort(key=lambda x: x.priority_level)
+                
+                logger.info(f"Generated {len(focus_areas)} fitness focus areas")
+                return focus_areas
+                
+            except Exception as e:
+                logger.error(f"Error generating fitness focus areas (attempt {attempt + 1}/{max_retries}): {str(e)}")
+                
+                if attempt < max_retries - 1:
+                    logger.info(f"Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    logger.error("All retry attempts failed, using default focus areas")
+                    # Return default focus areas as fallback
+                    return self._get_default_focus_areas(user_context)
     
     def _create_user_context_prompt(self, user_context: UserContext) -> str:
         """Create a detailed prompt with user context"""

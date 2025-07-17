@@ -1,1 +1,1 @@
-web: gunicorn webhook_server:app 
+web: gunicorn webhook_server:app --timeout 120 --workers 2 --worker-class sync 
