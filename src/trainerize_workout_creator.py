@@ -192,6 +192,9 @@ class TrainerizeWorkoutCreator:
                 if training_plan_ids and focus_area in training_plan_ids:
                     training_plan_id = training_plan_ids[focus_area]
                     logger.info(f"Using training plan ID {training_plan_id} for focus area {focus_area}")
+                else:
+                    logger.error(f"No training plan ID for focus area '{focus_area}'. Skipping workout creation for this focus area.")
+                    continue
                 for week in range(total_weeks):
                     for day_index in range(exercise_days_per_week):
                         # Calculate starting index for this day's exercises
@@ -201,8 +204,8 @@ class TrainerizeWorkoutCreator:
                         if len(day_exercises) < exercises_per_workout:
                             logger.warning(f"Not enough exercises for {focus_area} week {week+1} day {day_index+1}. Need {exercises_per_workout}, have {len(day_exercises)}")
                             continue
-                        # Unique workout name: '[user full name] day X'
-                        workout_name = f"{first_name} {last_name} day {global_day_number}"
+                        # Unique workout name: '[user full name] - [focus area] - Week X Day Y'
+                        workout_name = f"{first_name} {last_name} - {focus_area} - Week {week+1} Day {day_index+1}"
                         result = self.create_workout_from_exercises(
                             user_id,
                             day_exercises,

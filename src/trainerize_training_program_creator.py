@@ -59,7 +59,7 @@ class TrainerizeTrainingProgramCreator:
                 "end_date": (current_date + timedelta(weeks=2)).strftime("%Y-%m-%d")
             }
     
-    def create_training_program(self, user_id: str, focus_area: str, focus_area_index: int, user_start_date: str) -> Dict[str, Any]:
+    def create_training_program(self, user_id: str, focus_area: str, focus_area_index: int, user_start_date: str, user_first_name: str = '', user_last_name: str = '') -> Dict[str, Any]:
         """Create a training program in Trainerize for a specific focus area"""
         try:
             if not user_id:
@@ -73,10 +73,10 @@ class TrainerizeTrainingProgramCreator:
             # Calculate program dates
             dates = self.calculate_program_dates(user_start_date, focus_area_index)
             
-            # Create program name with week range
+            # Create program name with week range and focus area and user name for uniqueness
             week_start = (focus_area_index * 2) + 1
             week_end = week_start + 1
-            program_name = f"Week ({week_start}-{week_end})"
+            program_name = f"{user_first_name} {user_last_name} - {focus_area} (Week {week_start}-{week_end})"
             
             # Create instruction based on focus area
             instruction = f"Focus on {focus_area}. This 2-week program is designed to help you achieve your fitness goals through targeted training and progressive overload."
@@ -145,7 +145,7 @@ class TrainerizeTrainingProgramCreator:
                 "status": "failed"
             }
     
-    def create_training_programs_for_focus_areas(self, user_id: str, focus_areas: List[str], user_start_date: str) -> List[Dict[str, Any]]:
+    def create_training_programs_for_focus_areas(self, user_id: str, focus_areas: List[str], user_start_date: str, user_first_name: str = '', user_last_name: str = '') -> List[Dict[str, Any]]:
         """Create training programs for all focus areas"""
         try:
             if not user_id:
@@ -165,7 +165,7 @@ class TrainerizeTrainingProgramCreator:
             for index, focus_area in enumerate(focus_areas):
                 logger.info(f"Creating training program for focus area {index + 1}: {focus_area}")
                 
-                result = self.create_training_program(user_id, focus_area, index, user_start_date)
+                result = self.create_training_program(user_id, focus_area, index, user_start_date, user_first_name, user_last_name)
                 
                 if result.get("status") == "success":
                     created_programs.append(result)

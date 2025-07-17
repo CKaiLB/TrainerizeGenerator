@@ -47,9 +47,15 @@ class FitnessProgramOrchestrator:
             logger.info(f"Generated {len(focus_areas)} fitness focus areas")
             
             # Step 3: Match exercises to each focus area using vector search
-            # Calculate exercises needed per focus area: exercise_days_per_week * 5 exercises per workout
-            exercises_needed_per_area = user_context.exercise_days_per_week * 5
-            exercise_matches = self.exercise_matcher.match_exercises_to_focus_areas(focus_areas, exercises_per_area=exercises_needed_per_area)
+            # Calculate exercises needed per focus area: exercise_days_per_week * total_weeks * 5 exercises per workout
+            total_weeks = 16
+            exercises_needed_per_area = user_context.exercise_days_per_week * total_weeks * 5
+            exercise_matches = self.exercise_matcher.match_exercises_to_focus_areas(
+                focus_areas,
+                exercises_per_area=5,
+                exercise_days_per_week=user_context.exercise_days_per_week,
+                total_weeks=total_weeks
+            )
             logger.info(f"Matched {len(exercise_matches)} exercises to focus areas (need {exercises_needed_per_area} per area for {user_context.exercise_days_per_week} workout days)")
             
             # Step 4: Create weekly exercise plan

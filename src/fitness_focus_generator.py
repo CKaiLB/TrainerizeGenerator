@@ -104,7 +104,7 @@ class FitnessFocusGenerator:
                     ],
                     temperature=0.7,
                     max_tokens=2000,
-                    timeout=8.0  # 8 second timeout for the request
+                    timeout=30.0  # Increased timeout to 30 seconds
                 )
                 # Extract and parse the response
                 response_content = response.choices[0].message.content
@@ -131,6 +131,8 @@ class FitnessFocusGenerator:
                 return focus_areas
             except Exception as e:
                 logger.error(f"Error generating fitness focus areas (attempt {attempt + 1}/{max_retries}): {str(e)}")
+                logger.error(f"Prompt: {user_prompt}")
+                logger.error(f"Model: gpt-4.1-mini, Timeout: 30.0s")
                 self._record_openai_failure()
                 if attempt < max_retries - 1:
                     logger.info(f"Retrying in {retry_delay} seconds...")
