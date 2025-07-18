@@ -31,8 +31,8 @@ class FocusAreaExerciseMatcher:
         self.vector_search = VectorSearch()
         logger.info("FocusAreaExerciseMatcher initialized")
     
-    def match_exercises_to_focus_areas(self, focus_areas: List[FitnessFocusArea], exercises_per_area: int = 5, exercise_days_per_week: int = 3) -> List[FocusAreaExerciseMatch]:
-        """Match exercises to each focus area using vector search"""
+    def match_exercises_to_focus_areas(self, focus_areas: List[FitnessFocusArea], exercises_per_area: int = 5, exercise_days_per_week: int = 3, level: str = None, main_muscle: str = None, equipment: str = None, force: str = None) -> List[FocusAreaExerciseMatch]:
+        """Match exercises to each focus area using vector search and tag-based filtering"""
         try:
             logger.info(f"Matching exercises to {len(focus_areas)} focus areas")
             
@@ -42,22 +42,22 @@ class FocusAreaExerciseMatcher:
             
             for focus_area in focus_areas:
                 logger.info(f"Searching exercises for focus area: {focus_area.area_name}")
-                
-                # Create search query for this focus area
+                # For demonstration, use the provided filters (in practice, these could be dynamic per focus area or user)
                 search_query = self._create_search_query_for_focus_area(focus_area)
-                
-                # Search for exercises
-                search_results = self.vector_search.search_exercises(search_query, limit=exercises_needed_per_area)
+                search_results = self.vector_search.search_exercises(
+                    search_query,
+                    limit=exercises_needed_per_area,
+                    level=level,
+                    main_muscle=main_muscle,
+                    equipment=equipment,
+                    force=force
+                )
                 logger.info(f"Found {len(search_results)} exercises for {focus_area.area_name}")
-                
-                # Convert results to FocusAreaExerciseMatch objects
                 for result in search_results:
                     match = self._create_exercise_match(focus_area, result)
                     all_matches.append(match)
-            
             logger.info(f"Total matches found: {len(all_matches)}")
             return all_matches
-            
         except Exception as e:
             logger.error(f"Error matching exercises to focus areas: {str(e)}")
             return []
@@ -234,3 +234,29 @@ class FocusAreaExerciseMatcher:
         except Exception as e:
             logger.error(f"Error exporting weekly plan to JSON: {str(e)}")
             return "{}" 
+
+if __name__ == "__main__":
+    # Practice/test: search for beginner, chest, dumbbell, push
+    matcher = FocusAreaExerciseMatcher()
+    class DummyFocusArea:
+        area_name = "Push Strength"
+        description = "Build upper body push strength"
+        priority_level = 1
+        target_muscle_groups = ["Chest"]
+        training_frequency = "3x/week"
+        intensity_level = "Beginner"
+        special_considerations = "None"
+        expected_outcomes = ["Strength"]
+    focus_areas = [DummyFocusArea()]
+    matches = matcher.match_exercises_to_focus_areas(
+        focus_areas,
+        exercises_per_area=5,
+        exercise_days_per_week=3,
+        level="beginner",
+        main_muscle="Chest",
+        equipment="Dumbbell",
+        force="push"
+    )
+    print(f"Found {len(matches)} matches for practice focus area:")
+    for m in matches:
+        print(f"- {m.exercise_name} (ID: {m.exercise_id})") 

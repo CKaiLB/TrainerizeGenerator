@@ -61,8 +61,8 @@ class VectorSearch:
             logger.error(f"Error creating embedding: {str(e)}")
             return []
     
-    def search_exercises(self, query_text: str, limit: int = 5) -> List[Dict[str, Any]]:
-        """Search for exercises using direct Qdrant HTTP API"""
+    def search_exercises(self, query_text: str, limit: int = 5, level: str = None, main_muscle: str = None, equipment: str = None, force: str = None) -> List[Dict[str, Any]]:
+        """Search for exercises using direct Qdrant HTTP API, with optional tag-based filtering on tags array (type/name pairs)"""
         try:
             # Create query embedding
             query_vector = self.create_embedding(query_text)
@@ -71,7 +71,21 @@ class VectorSearch:
                 logger.error("Failed to create query embedding")
                 return []
             
-            # Prepare the search request body
+            # Build Qdrant payload filter for tags array (type/name pairs)
+            must_filters = []
+            if level:
+                must_filters.append({"key": "tags.type", "match": {"value": "level"}})
+                must_filters.append({"key": "tags.name", "match": {"value": level}})
+            if main_muscle:
+                must_filters.append({"key": "tags.type", "match": {"value": "mainMuscle"}})
+                must_filters.append({"key": "tags.name", "match": {"value": main_muscle}})
+            if equipment:
+                must_filters.append({"key": "tags.type", "match": {"value": "equipment"}})
+                must_filters.append({"key": "tags.name", "match": {"value": equipment}})
+            if force:
+                must_filters.append({"key": "tags.type", "match": {"value": "force"}})
+                must_filters.append({"key": "tags.name", "match": {"value": force}})
+            
             search_payload = {
                 "vector": {
                     "name": "text",
@@ -80,6 +94,8 @@ class VectorSearch:
                 "limit": limit,
                 "with_payload": True
             }
+            if must_filters:
+                search_payload["filter"] = {"must": must_filters}
             
             # Make POST request to Qdrant
             response = requests.post(

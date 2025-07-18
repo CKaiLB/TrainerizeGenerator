@@ -183,8 +183,21 @@ Based on this comprehensive profile, create 8 custom fitness focus areas that wi
 4. Work within their time constraints
 5. Consider their health conditions
 6. Align with their preferences
+7. Not focus on their nutrition
 
-Return the response as a valid JSON array with exactly 8 focus areas.
+"Here are examples of good fitness focus areas:\n"
+    "- Upper Body Push Strength (e.g., chest press, push-ups)\n"
+    "- Lower Body Pull (e.g., deadlifts, hamstring curls)\n"
+    "- Core Stability (e.g., planks, anti-rotation)\n"
+    "- Hip Mobility (e.g., hip flexor stretches, dynamic lunges)\n"
+    "- Shoulder Flexibility (e.g., band pull-aparts, wall slides)\n"
+    "- Cardiovascular Endurance (e.g., treadmill, cycling)\n"
+    "- Full Body Power (e.g., kettlebell swings, jump squats)\n"
+    "- Balance and Coordination (e.g., single-leg balance, BOSU work)\n"
+    "Avoid abstract or non-exercise-based focus areas like: 'Holistic Wellness', 'Lifestyle Optimization', 'Mindset Transformation', 'General Health'.\n"
+    "Each focus area should be specific, actionable, and map to common exercise types, movement patterns, or muscle groups. Avoid abstract or overly broad categories.\n"
+
+Return the response as a valid JSON array with exactly 8 focus areas. Try to not generate similar fitness focus areas but don't directly more than 3 examples.
 """
         return prompt
 

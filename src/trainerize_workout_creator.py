@@ -59,7 +59,7 @@ class TrainerizeWorkoutCreator:
             # Create the API payload (ensure userID is correct)
             api_payload = {
                 "workoutDef": workout_def,
-                "type": "mine",
+                "type": "trainingPlan",
                 "userID": user_id
             }
             
