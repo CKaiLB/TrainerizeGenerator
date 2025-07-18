@@ -18,6 +18,7 @@ class VectorSearch:
         """Initialize the vector search with API endpoints"""
         self.sagemaker_url = "https://xksr5iv13c.execute-api.us-east-1.amazonaws.com/prod/predict"
         self.qdrant_url = "https://afaec18b-c1b6-4060-9c24-de488d8baeee.us-east4-0.gcp.cloud.qdrant.io:6333/collections/trainerize_exercises/points/search"
+        self.collection_name = "trainerize_exercises"
         self.qdrant_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.3RKlrotEJc4VfUA-DnXLjsmQaK-d7VQVvJT3ZHCzX38"
         self.qdrant_headers = {
             "content-type": "application/json",
@@ -62,7 +63,7 @@ class VectorSearch:
             return []
     
     def search_exercises(self, query_text: str, limit: int = 5, level: str = None, main_muscle: str = None, equipment: str = None, force: str = None) -> List[Dict[str, Any]]:
-        """Search for exercises using direct Qdrant HTTP API, with optional tag-based filtering on tags array (type/name pairs)"""
+        """Search for exercises using direct Qdrant HTTP API, with optional tag-based filtering on tags dictionary"""
         try:
             # Create query embedding
             query_vector = self.create_embedding(query_text)
@@ -71,60 +72,76 @@ class VectorSearch:
                 logger.error("Failed to create query embedding")
                 return []
             
-            # Build Qdrant payload filter for tags array (type/name pairs)
+            # Build Qdrant payload filter for tags dictionary structure
+            # Only apply filters if they are provided and if exercises have the corresponding tag data
             must_filters = []
-            if level:
-                must_filters.append({"key": "tags.type", "match": {"value": "level"}})
-                must_filters.append({"key": "tags.name", "match": {"value": level}})
-            if main_muscle:
-                must_filters.append({"key": "tags.type", "match": {"value": "mainMuscle"}})
-                must_filters.append({"key": "tags.name", "match": {"value": main_muscle}})
-            if equipment:
-                must_filters.append({"key": "tags.type", "match": {"value": "equipment"}})
-                must_filters.append({"key": "tags.name", "match": {"value": equipment}})
-            if force:
-                must_filters.append({"key": "tags.type", "match": {"value": "force"}})
-                must_filters.append({"key": "tags.name", "match": {"value": force}})
             
+            if level:
+                # Filter for exercises that have the specified level in their tags
+                must_filters.append({
+                    "key": "tags.level",
+                    "match": { "value": level }
+                })
+            
+            if main_muscle:
+                # Filter for exercises that have the specified main muscle in their tags
+                must_filters.append({
+                    "key": "tags.mainMuscle",
+                    "match": { "value": main_muscle }
+                })
+            
+            if equipment:
+                # Filter for exercises that have the specified equipment in their tags
+                must_filters.append({
+                    "key": "tags.equipment",
+                    "match": { "value": equipment }
+                })
+            
+            if force:
+                # Filter for exercises that have the specified force in their tags
+                must_filters.append({
+                    "key": "tags.force",
+                    "match": { "value": force }
+                })
+            
+            # Build the search payload
             search_payload = {
                 "vector": {
                     "name": "text",
                     "vector": query_vector
                 },
                 "limit": limit,
-                "with_payload": True
+                "with_payload": True,
+                "with_vector": False
             }
-            if must_filters:
-                search_payload["filter"] = {"must": must_filters}
             
-            # Make POST request to Qdrant
+            # Only add filter if we have any filters
+            if must_filters:
+                search_payload["filter"] = {
+                    "must": must_filters
+                }
+                logger.info(f"Applying filters: {must_filters}")
+            else:
+                logger.info("No filters applied - searching all exercises")
+            
+            # Make the search request
             response = requests.post(
                 self.qdrant_url,
+                headers=self.qdrant_headers,  # Use the headers with API key
                 json=search_payload,
-                headers=self.qdrant_headers
+                timeout=10
             )
             
             if response.status_code == 200:
-                result = response.json()
-                logger.info(f"Search returned {len(result.get('result', []))} results")
-                
-                # Process and return results
-                results = []
-                for item in result.get('result', []):
-                    exercise_data = {
-                        'id': item.get('id'),
-                        'score': item.get('score'),
-                        'payload': item.get('payload', {})
-                    }
-                    results.append(exercise_data)
-                
-                return results
+                search_results = response.json().get("result", [])
+                logger.info(f"Search returned {len(search_results)} results")
+                return search_results
             else:
                 logger.error(f"Qdrant search error: {response.status_code} - {response.text}")
                 return []
                 
         except Exception as e:
-            logger.error(f"Error searching exercises: {str(e)}")
+            logger.error(f"Error in vector search: {str(e)}")
             return []
     
     def get_exercise_by_id(self, exercise_id: str) -> Dict[str, Any]:

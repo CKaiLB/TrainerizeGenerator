@@ -32,7 +32,7 @@ class FocusAreaExerciseMatcher:
         logger.info("FocusAreaExerciseMatcher initialized")
     
     def match_exercises_to_focus_areas(self, focus_areas: List[FitnessFocusArea], exercises_per_area: int = 5, exercise_days_per_week: int = 3, level: str = None, main_muscle: str = None, equipment: str = None, force: str = None) -> List[FocusAreaExerciseMatch]:
-        """Match exercises to each focus area using vector search and tag-based filtering"""
+        """Match exercises to each focus area using vector search and optional tag-based filtering"""
         try:
             logger.info(f"Matching exercises to {len(focus_areas)} focus areas")
             
@@ -42,20 +42,26 @@ class FocusAreaExerciseMatcher:
             
             for focus_area in focus_areas:
                 logger.info(f"Searching exercises for focus area: {focus_area.area_name}")
-                # For demonstration, use the provided filters (in practice, these could be dynamic per focus area or user)
+                
+                # Search without filters first to get semantic matches
                 search_query = self._create_search_query_for_focus_area(focus_area)
                 search_results = self.vector_search.search_exercises(
                     search_query,
-                    limit=exercises_needed_per_area,
-                    level=level,
-                    main_muscle=main_muscle,
-                    equipment=equipment,
-                    force=force
+                    limit=exercises_needed_per_area * 2  # Get more results to filter from
                 )
-                logger.info(f"Found {len(search_results)} exercises for {focus_area.area_name}")
-                for result in search_results:
+                logger.info(f"Found {len(search_results)} initial exercises for {focus_area.area_name}")
+                
+                # Filter results in Python if filters are provided
+                filtered_results = self._filter_results_by_tags(search_results, level, main_muscle, equipment, force)
+                logger.info(f"After filtering: {len(filtered_results)} exercises for {focus_area.area_name}")
+                
+                # Take the required number of exercises
+                final_results = filtered_results[:exercises_needed_per_area]
+                
+                for result in final_results:
                     match = self._create_exercise_match(focus_area, result)
                     all_matches.append(match)
+                    
             logger.info(f"Total matches found: {len(all_matches)}")
             return all_matches
         except Exception as e:
@@ -94,6 +100,42 @@ class FocusAreaExerciseMatcher:
         logger.debug(f"Search query for {focus_area.area_name}: {search_query}")
         return search_query
     
+    def _filter_results_by_tags(self, search_results: List[Dict[str, Any]], level: str = None, main_muscle: str = None, equipment: str = None, force: str = None) -> List[Dict[str, Any]]:
+        """Filter search results by tags in Python (since Qdrant doesn't have indexes on tag fields)"""
+        if not any([level, main_muscle, equipment, force]):
+            return search_results  # No filters to apply
+        
+        filtered_results = []
+        
+        for result in search_results:
+            payload = result.get('payload', {})
+            tags = payload.get('tags', {})
+            
+            # Check if exercise matches all provided filters
+            matches_all_filters = True
+            
+            if level and 'level' in tags:
+                if level not in tags['level']:
+                    matches_all_filters = False
+            
+            if main_muscle and 'mainMuscle' in tags:
+                if main_muscle not in tags['mainMuscle']:
+                    matches_all_filters = False
+            
+            if equipment and 'equipment' in tags:
+                if equipment not in tags['equipment']:
+                    matches_all_filters = False
+            
+            if force and 'force' in tags:
+                if force not in tags['force']:
+                    matches_all_filters = False
+            
+            if matches_all_filters:
+                filtered_results.append(result)
+        
+        logger.info(f"Filtered {len(search_results)} results to {len(filtered_results)} using Python filtering")
+        return filtered_results
+    
     def _create_exercise_match(self, focus_area: FitnessFocusArea, search_result: Dict[str, Any]) -> FocusAreaExerciseMatch:
         """Create a FocusAreaExerciseMatch from search result"""
         
@@ -107,16 +149,44 @@ class FocusAreaExerciseMatcher:
             logger.warning(f"No exercise_id found in payload for exercise: {payload.get('name', 'Unknown')}")
             exercise_id = ''
         
+        # Handle the actual data structure from Qdrant
+        # Tags are stored as a dictionary with arrays, e.g., {'mainMuscle': ['chest'], 'force': ['push']}
+        tags = payload.get('tags', {})
+        
+        # Extract muscle groups from tags or main_muscle field
+        muscle_groups = []
+        if 'mainMuscle' in tags and tags['mainMuscle']:
+            muscle_groups = tags['mainMuscle']
+        elif payload.get('main_muscle'):
+            muscle_groups = payload.get('main_muscle', [])
+        
+        # Extract equipment from tags or equipment field
+        equipment = []
+        if 'equipment' in tags and tags['equipment']:
+            equipment = tags['equipment']
+        elif payload.get('equipment'):
+            equipment = payload.get('equipment', [])
+        
+        # Extract difficulty/level from tags or level field
+        difficulty = ''
+        if 'level' in tags and tags['level']:
+            difficulty = tags['level'][0] if tags['level'] else ''
+        elif payload.get('level'):
+            difficulty = payload.get('level', [''])[0] if payload.get('level') else ''
+        
+        # Extract category from record_type
+        category = payload.get('record_type', '')
+        
         return FocusAreaExerciseMatch(
             focus_area_name=focus_area.area_name,
             focus_area_description=focus_area.description,
             exercise_id=exercise_id,
             exercise_name=payload.get('name', ''),
             exercise_description=payload.get('description', ''),
-            exercise_category=payload.get('category', ''),
-            exercise_equipment=payload.get('equipment', []),
-            exercise_muscle_groups=payload.get('muscle_groups', []),
-            exercise_difficulty=payload.get('difficulty', ''),
+            exercise_category=category,
+            exercise_equipment=equipment,
+            exercise_muscle_groups=muscle_groups,
+            exercise_difficulty=difficulty,
             match_score=search_result.get('score', 0.0),
             priority_level=focus_area.priority_level
         )
@@ -253,8 +323,8 @@ if __name__ == "__main__":
         exercises_per_area=5,
         exercise_days_per_week=3,
         level="beginner",
-        main_muscle="Chest",
-        equipment="Dumbbell",
+        main_muscle="chestInner",
+        equipment="dumbbell",
         force="push"
     )
     print(f"Found {len(matches)} matches for practice focus area:")

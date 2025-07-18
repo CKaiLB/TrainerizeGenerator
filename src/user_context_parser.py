@@ -151,7 +151,7 @@ def parse_user_context(json_input: Dict[str, Any]) -> UserContext:
         macro_familiarity = int(get_field_value(fields, 'question_JlVagz', 1))
         
         # Extract exercise
-        exercise_days_per_week = int(get_field_value(fields, 'question_gqQypM', 0))
+        exercise_days_per_week = int(get_field_value(fields, 'question_NXNJbW', 0))
         exercise_days = extract_exercise_days(fields)
         preferred_workout_length = get_field_value(fields, 'question_XoRVge', '')
         start_date = get_field_value(fields, 'question_oRlV6e', '')
