@@ -171,39 +171,47 @@ def extract_user_context_from_tally_data(tally_data):
             label = field.get('label', '')
             value = field.get('value', '')
             
+            # Ensure value is not None and convert to string if needed
+            if value is None:
+                continue
+            
+            # Convert value to string to avoid None issues
+            value_str = str(value) if value is not None else ''
+            
             # Extract first and last name
             if key == 'question_zMWrpa' and label == 'First Name':
-                user_context['first_name'] = value
+                user_context['first_name'] = value_str
             elif key == 'question_59EG66' and label == 'Last Name':
-                user_context['last_name'] = value
+                user_context['last_name'] = value_str
             
             # Extract other fields based on common label patterns
-            elif 'age' in label.lower():
+            elif 'age' in label.lower() and value_str:
                 try:
-                    user_context['age'] = int(value) if value else 25
+                    user_context['age'] = int(value_str) if value_str else 25
                 except (ValueError, TypeError):
                     user_context['age'] = 25
             
-            elif 'gender' in label.lower():
-                if value and value.lower() in ['male', 'female', 'other']:
-                    user_context['gender'] = value.lower()
+            elif 'gender' in label.lower() and value_str:
+                if value_str.lower() in ['male', 'female', 'other']:
+                    user_context['gender'] = value_str.lower()
             
-            elif 'fitness level' in label.lower():
-                if value and value.lower() in ['beginner', 'intermediate', 'advanced']:
-                    user_context['current_fitness_level'] = value.lower()
+            elif 'fitness level' in label.lower() and value_str:
+                if value_str.lower() in ['beginner', 'intermediate', 'advanced']:
+                    user_context['current_fitness_level'] = value_str.lower()
             
-            elif 'goal' in label.lower():
-                if value:
-                    if isinstance(value, list):
-                        user_context['fitness_goals'] = value
-                    else:
-                        user_context['fitness_goals'] = [value]
+            elif 'goal' in label.lower() and value:
+                if isinstance(value, list):
+                    user_context['fitness_goals'] = [str(v) for v in value if v is not None]
+                else:
+                    user_context['fitness_goals'] = [value_str] if value_str else user_context['fitness_goals']
         
         logger.info(f"Extracted user context for {user_context['first_name']} {user_context['last_name']}")
         return user_context
         
     except Exception as e:
         logger.error(f"Error extracting user context from Tally data: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return None
 
 def extract_full_name_from_tally_data(tally_data):
