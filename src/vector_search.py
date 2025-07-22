@@ -4,6 +4,8 @@ import json
 import logging
 from typing import List, Dict, Any
 from dotenv import load_dotenv
+from sentence_transformers import SentenceTransformer
+import numpy as np
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -12,11 +14,10 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 class VectorSearch:
-    """Vector search using SageMaker API for embedding and direct Qdrant HTTP calls"""
+    """Vector search using local sentence-transformers model for embedding and direct Qdrant HTTP calls"""
     
     def __init__(self):
-        """Initialize the vector search with API endpoints"""
-        self.sagemaker_url = "https://xksr5iv13c.execute-api.us-east-1.amazonaws.com/prod/predict"
+        """Initialize the vector search with API endpoints and local model"""
         self.qdrant_url = "https://afaec18b-c1b6-4060-9c24-de488d8baeee.us-east4-0.gcp.cloud.qdrant.io:6333/collections/trainerize_exercises/points/search"
         self.collection_name = "trainerize_exercises"
         self.qdrant_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.3RKlrotEJc4VfUA-DnXLjsmQaK-d7VQVvJT3ZHCzX38"
@@ -24,39 +25,37 @@ class VectorSearch:
             "content-type": "application/json",
             "api-key": self.qdrant_api_key
         }
+        
+        # Initialize the sentence transformer model
+        # This will download the model on first use (~90MB)
+        logger.info("Loading sentence-transformers model: all-MiniLM-L6-v2")
+        try:
+            self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+            logger.info("Successfully loaded sentence-transformers model")
+        except Exception as e:
+            logger.error(f"Failed to load sentence-transformers model: {str(e)}")
+            raise
     
     def create_embedding(self, text: str) -> List[float]:
-        """Create embedding using SageMaker API"""
+        """Create embedding using local sentence-transformers model"""
         try:
-            # Prepare the request body with required 'mode' field
-            payload = {
-                "text_inputs": text,
-                "mode": "embedding"  # Add the required mode field
-            }
-            
-            # Make POST request to SageMaker API
-            response = requests.post(
-                self.sagemaker_url,
-                json=payload,
-                headers={"Content-Type": "application/json"}
-            )
-            
-            if response.status_code == 200:
-                # Parse the response to get the embedding
-                result = response.json()
-                # Assuming the API returns the embedding in a specific format
-                # You may need to adjust this based on the actual response structure
-                embedding = result.get("embedding", result.get("vector", result))
-                
-                # Ensure it's a list of floats
-                if isinstance(embedding, list):
-                    return [float(x) for x in embedding]
-                else:
-                    logger.error(f"Unexpected embedding format: {type(embedding)}")
-                    return []
-            else:
-                logger.error(f"SageMaker API error: {response.status_code} - {response.text}")
+            if not text or not isinstance(text, str):
+                logger.error("Invalid input text for embedding")
                 return []
+            
+            # Use the sentence transformer model to create embeddings
+            # The model.encode() method returns numpy arrays by default
+            embedding = self.embedding_model.encode([text])  # Pass as list for batch processing
+            
+            # Convert numpy array to list of floats
+            # embedding will be shape (1, 384) for single input, so we take the first row
+            embedding_list = embedding[0].tolist()
+            
+            # Ensure all values are floats (they should be already, but just to be safe)
+            embedding_floats = [float(x) for x in embedding_list]
+            
+            logger.debug(f"Created embedding with {len(embedding_floats)} dimensions")
+            return embedding_floats
                 
         except Exception as e:
             logger.error(f"Error creating embedding: {str(e)}")
@@ -177,4 +176,4 @@ class VectorSearch:
             
         except Exception as e:
             logger.error(f"Error getting exercise by ID: {str(e)}")
-            return {} 
+            return {}
