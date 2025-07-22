@@ -149,63 +149,179 @@ def extract_user_context_from_tally_data(tally_data):
     try:
         fields = tally_data.get('data', {}).get('fields', [])
         
-        # Initialize default values
+        # Initialize with fallback values only
         user_context = {
             'first_name': '',
             'last_name': '',
             'age': 25,
             'gender': 'male',
             'current_fitness_level': 'beginner',
-            'fitness_goals': ['weight loss', 'muscle building'],
+            'fitness_goals': [],
             'workout_frequency': 3,
             'workout_duration': 60,
-            'preferred_workout_types': ['strength training'],
+            'preferred_workout_types': [],
             'equipment_access': ['gym'],
             'limitations_injuries': [],
             'additional_info': ''
         }
         
-        # Extract data from Tally fields
+        # Create a map of field keys to values for easier lookup
+        field_map = {}
         for field in fields:
             key = field.get('key', '')
+            value = field.get('value')
             label = field.get('label', '')
-            value = field.get('value', '')
-            
-            # Ensure value is not None and convert to string if needed
-            if value is None:
-                continue
-            
-            # Convert value to string to avoid None issues
-            value_str = str(value) if value is not None else ''
-            
-            # Extract first and last name
-            if key == 'question_zMWrpa' and label == 'First Name':
-                user_context['first_name'] = value_str
-            elif key == 'question_59EG66' and label == 'Last Name':
-                user_context['last_name'] = value_str
-            
-            # Extract other fields based on common label patterns
-            elif 'age' in label.lower() and value_str:
-                try:
-                    user_context['age'] = int(value_str) if value_str else 25
-                except (ValueError, TypeError):
-                    user_context['age'] = 25
-            
-            elif 'gender' in label.lower() and value_str:
-                if value_str.lower() in ['male', 'female', 'other']:
-                    user_context['gender'] = value_str.lower()
-            
-            elif 'fitness level' in label.lower() and value_str:
-                if value_str.lower() in ['beginner', 'intermediate', 'advanced']:
-                    user_context['current_fitness_level'] = value_str.lower()
-            
-            elif 'goal' in label.lower() and value:
-                if isinstance(value, list):
-                    user_context['fitness_goals'] = [str(v) for v in value if v is not None]
-                else:
-                    user_context['fitness_goals'] = [value_str] if value_str else user_context['fitness_goals']
+            field_map[key] = {'value': value, 'label': label, 'field': field}
         
-        logger.info(f"Extracted user context for {user_context['first_name']} {user_context['last_name']}")
+        # Extract specific Tally form fields
+        
+        # Basic Info
+        if 'question_zMWrpa' in field_map:
+            user_context['first_name'] = str(field_map['question_zMWrpa']['value'] or '')
+            
+        if 'question_59EG66' in field_map:
+            user_context['last_name'] = str(field_map['question_59EG66']['value'] or '')
+            
+        if 'question_Ap6oao' in field_map:
+            try:
+                age_value = field_map['question_Ap6oao']['value']
+                user_context['age'] = int(age_value) if age_value else 25
+            except (ValueError, TypeError):
+                user_context['age'] = 25
+                
+        if 'question_lOVlDB' in field_map:
+            gender_value = field_map['question_lOVlDB']['value']
+            if gender_value and str(gender_value).lower() in ['male', 'female']:
+                user_context['gender'] = str(gender_value).lower()
+        
+        # Fitness Goals
+        fitness_goals = []
+        if 'question_WReGQL' in field_map:
+            goal_text = field_map['question_WReGQL']['value']
+            if goal_text:
+                fitness_goals.append(str(goal_text))
+        
+        # Goal Classification (question_Dp0v2q)
+        if 'question_Dp0v2q' in field_map:
+            goal_classification = field_map['question_Dp0v2q']['field']
+            selected_values = goal_classification.get('value', [])
+            options = goal_classification.get('options', [])
+            
+            # Map selected option IDs to text
+            for option in options:
+                if option.get('id') in selected_values:
+                    option_text = option.get('text', '').lower()
+                    if 'beginner' in option_text:
+                        user_context['current_fitness_level'] = 'beginner'
+                    elif 'intermediate' in option_text:
+                        user_context['current_fitness_level'] = 'intermediate'
+                    elif 'advanced' in option_text:
+                        user_context['current_fitness_level'] = 'advanced'
+                    elif 'weight loss' in option_text:
+                        fitness_goals.append('weight loss')
+                    elif 'mass gain' in option_text:
+                        fitness_goals.append('muscle building')
+                    elif 'nutrition' in option_text:
+                        fitness_goals.append('nutrition improvement')
+        
+        # Activity Level (question_Ro8BKd)
+        if 'question_Ro8BKd' in field_map:
+            activity_field = field_map['question_Ro8BKd']['field']
+            selected_values = activity_field.get('value', [])
+            options = activity_field.get('options', [])
+            
+            for option in options:
+                if option.get('id') in selected_values:
+                    activity_text = option.get('text', '').lower()
+                    if 'sedentary' in activity_text:
+                        user_context['current_fitness_level'] = 'beginner'
+                    elif 'lightly active' in activity_text:
+                        user_context['current_fitness_level'] = 'beginner'
+                    elif 'moderately active' in activity_text:
+                        user_context['current_fitness_level'] = 'intermediate'
+                    elif 'very active' in activity_text:
+                        user_context['current_fitness_level'] = 'advanced'
+        
+        # Workout Frequency (question_NXNJbW)
+        if 'question_NXNJbW' in field_map:
+            try:
+                frequency_value = field_map['question_NXNJbW']['value']
+                user_context['workout_frequency'] = int(frequency_value) if frequency_value else 3
+            except (ValueError, TypeError):
+                user_context['workout_frequency'] = 3
+        
+        # Workout Duration (question_XoRVge)
+        if 'question_XoRVge' in field_map:
+            duration_field = field_map['question_XoRVge']['field']
+            selected_values = duration_field.get('value', [])
+            options = duration_field.get('options', [])
+            
+            for option in options:
+                if option.get('id') in selected_values:
+                    duration_text = option.get('text', '')
+                    if '30 min' in duration_text:
+                        user_context['workout_duration'] = 30
+                    elif '45 min' in duration_text:
+                        user_context['workout_duration'] = 45
+                    elif '1 hour' in duration_text:
+                        user_context['workout_duration'] = 60
+        
+        # Health Conditions/Limitations (question_BpLOg4)
+        limitations = []
+        if 'question_BpLOg4' in field_map:
+            health_conditions = field_map['question_BpLOg4']['value']
+            if health_conditions and str(health_conditions).strip():
+                limitations.append(str(health_conditions))
+                
+        # Food Allergies (question_kG0Dpd)
+        if 'question_kG0Dpd' in field_map:
+            allergies = field_map['question_kG0Dpd']['value']
+            if allergies and str(allergies).strip():
+                limitations.append(f"Food allergies: {str(allergies)}")
+        
+        user_context['limitations_injuries'] = limitations
+        
+        # What's holding you back (question_a4jbkW)
+        additional_info_parts = []
+        if 'question_a4jbkW' in field_map:
+            holding_back = field_map['question_a4jbkW']['value']
+            if holding_back and str(holding_back).strip():
+                additional_info_parts.append(f"What's holding back: {str(holding_back)}")
+        
+        # Habits to destroy (question_zMWB1q)
+        if 'question_zMWB1q' in field_map:
+            bad_habits = field_map['question_zMWB1q']['value']
+            if bad_habits and str(bad_habits).strip():
+                additional_info_parts.append(f"Habits to destroy: {str(bad_habits)}")
+                
+        # Habits to build (question_59E0pd)
+        if 'question_59E0pd' in field_map:
+            good_habits = field_map['question_59E0pd']['value']
+            if good_habits and str(good_habits).strip():
+                additional_info_parts.append(f"Habits to build: {str(good_habits)}")
+        
+        user_context['additional_info'] = '; '.join(additional_info_parts)
+        
+        # Set fitness goals if we extracted any
+        if fitness_goals:
+            user_context['fitness_goals'] = fitness_goals
+        else:
+            user_context['fitness_goals'] = ['general fitness']  # fallback
+            
+        # Set default workout types based on fitness level and goals
+        workout_types = ['strength training']
+        if 'weight loss' in user_context['fitness_goals']:
+            workout_types.append('cardio')
+        if user_context['current_fitness_level'] == 'beginner':
+            workout_types.append('functional training')
+            
+        user_context['preferred_workout_types'] = workout_types
+        
+        logger.info(f"Extracted user context for {user_context['first_name']} {user_context['last_name']}: "
+                   f"Age {user_context['age']}, {user_context['gender']}, "
+                   f"{user_context['current_fitness_level']} level, "
+                   f"{user_context['workout_frequency']}x/week, "
+                   f"{user_context['workout_duration']}min workouts")
         return user_context
         
     except Exception as e:
