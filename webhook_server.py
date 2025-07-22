@@ -144,6 +144,68 @@ def model_status():
     
     return jsonify(status), 200
 
+def extract_user_context_from_tally_data(tally_data):
+    """Extract user context information from Tally survey data for fitness program generation"""
+    try:
+        fields = tally_data.get('data', {}).get('fields', [])
+        
+        # Initialize default values
+        user_context = {
+            'first_name': '',
+            'last_name': '',
+            'age': 25,
+            'gender': 'male',
+            'current_fitness_level': 'beginner',
+            'fitness_goals': ['weight loss', 'muscle building'],
+            'workout_frequency': 3,
+            'workout_duration': 60,
+            'preferred_workout_types': ['strength training'],
+            'equipment_access': ['gym'],
+            'limitations_injuries': [],
+            'additional_info': ''
+        }
+        
+        # Extract data from Tally fields
+        for field in fields:
+            key = field.get('key', '')
+            label = field.get('label', '')
+            value = field.get('value', '')
+            
+            # Extract first and last name
+            if key == 'question_zMWrpa' and label == 'First Name':
+                user_context['first_name'] = value
+            elif key == 'question_59EG66' and label == 'Last Name':
+                user_context['last_name'] = value
+            
+            # Extract other fields based on common label patterns
+            elif 'age' in label.lower():
+                try:
+                    user_context['age'] = int(value) if value else 25
+                except (ValueError, TypeError):
+                    user_context['age'] = 25
+            
+            elif 'gender' in label.lower():
+                if value and value.lower() in ['male', 'female', 'other']:
+                    user_context['gender'] = value.lower()
+            
+            elif 'fitness level' in label.lower():
+                if value and value.lower() in ['beginner', 'intermediate', 'advanced']:
+                    user_context['current_fitness_level'] = value.lower()
+            
+            elif 'goal' in label.lower():
+                if value:
+                    if isinstance(value, list):
+                        user_context['fitness_goals'] = value
+                    else:
+                        user_context['fitness_goals'] = [value]
+        
+        logger.info(f"Extracted user context for {user_context['first_name']} {user_context['last_name']}")
+        return user_context
+        
+    except Exception as e:
+        logger.error(f"Error extracting user context from Tally data: {str(e)}")
+        return None
+
 def extract_full_name_from_tally_data(tally_data):
     """Extract the full name from Tally survey data"""
     try:
