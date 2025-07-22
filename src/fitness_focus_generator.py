@@ -144,7 +144,9 @@ class FitnessFocusGenerator:
 
     def _create_user_context_prompt(self, user_context: UserContext) -> str:
         prompt = f"""
-Please analyze this client's profile and create 8 custom fitness focus areas for their 16-week transformation program:
+You are an expert fitness trainer with 10+ years of experience working with overweight men helping them build 
+nutrition plans that are custom tailored to their needs, skill level, limitations, and availability.
+Analyze this client's profile and create 8 custom fitness focus areas for their 16-week transformation program:
 
 CLIENT PROFILE:
 - Name: {user_context.first_name} {user_context.last_name}
@@ -177,25 +179,27 @@ HABITS:
 - Habits to Build: {', '.join(user_context.habits_to_build)}
 
 Based on this comprehensive profile, create 8 custom fitness focus areas that will:
+If the useres goal classification overall profile seems to be beginner or new to fitness, generate each focus area beginning with only body weight focuses and include the words "body weight" or "beginner" in them. (No machines for beginners)
+
 1. Address their specific goals and limitations
 2. Build sustainable habits
 3. Provide progressive challenges
 4. Work within their time constraints
 5. Consider their health conditions
 6. Align with their preferences
-7. Not focus on their nutrition
+7. Only focus on fitness areas that can be improved through working out (no nutritional tips or focuses)
 
 "Here are examples of good fitness focus areas:\n"
-    "- Upper Body Push Strength (e.g., chest press, push-ups)\n"
-    "- Lower Body Pull (e.g., deadlifts, hamstring curls)\n"
-    "- Core Stability (e.g., planks, anti-rotation)\n"
-    "- Hip Mobility (e.g., hip flexor stretches, dynamic lunges)\n"
-    "- Shoulder Flexibility (e.g., band pull-aparts, wall slides)\n"
-    "- Cardiovascular Endurance (e.g., treadmill, cycling)\n"
-    "- Full Body Power (e.g., kettlebell swings, jump squats)\n"
-    "- Balance and Coordination (e.g., single-leg balance, BOSU work)\n"
-    "Avoid abstract or non-exercise-based focus areas like: 'Holistic Wellness', 'Lifestyle Optimization', 'Mindset Transformation', 'General Health'.\n"
-    "Each focus area should be specific, actionable, and map to common exercise types, movement patterns, or muscle groups. Avoid abstract or overly broad categories.\n"
+    "Body Weight Upper Body Push Strength (e.g., chest press, push-ups)\n"
+    "Body Weight Lower Body Pull (e.g., deadlifts, hamstring curls)\n"
+    "Body Weight Core Stability (e.g., planks, anti-rotation)\n"
+    "Body Weight Hip Mobility (e.g., hip flexor stretches, dynamic lunges)\n"
+    "Light Weight Shoulder Flexibility (e.g., band pull-aparts, wall slides)\n"
+    "Body Weght Cardiovascular Endurance (e.g., treadmill, cycling)\n"
+    "Medium Weight Full Body Power (e.g., kettlebell swings, jump squats)\n"
+    "Body Weight Balance and Coordination (e.g., single-leg balance, BOSU work)\n"
+Avoid abstract or non-exercise-based focus areas like: 'Holistic Wellness', 'Lifestyle Optimization', 'Mindset Transformation', 'General Health'.\n
+Each focus area should be specific, actionable, and map to common exercise types, movement patterns, or muscle groups. Avoid abstract or overly broad categories.\n
 
 Return the response as a valid JSON array with exactly 8 focus areas. Try to not generate similar fitness focus areas but don't directly more than 3 examples.
 """
