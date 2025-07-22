@@ -536,34 +536,12 @@ def process_tally_webhook(tally_data):
             # Create the orchestrator and generate the program
             orchestrator = FitnessProgramOrchestrator()
             
-            # Extract user context from Tally data for fitness program generation
-            user_context_data = extract_user_context_from_tally_data(tally_data)
-            if user_context_data:
-                # Create UserContext object from the dictionary
-                from src.user_context_parser import UserContext
-                user_context = UserContext(
-                    first_name=user_context_data.get('first_name', ''),
-                    last_name=user_context_data.get('last_name', ''),
-                    age=user_context_data.get('age', 25),
-                    gender=user_context_data.get('gender', 'male'),
-                    current_fitness_level=user_context_data.get('current_fitness_level', 'beginner'),
-                    fitness_goals=user_context_data.get('fitness_goals', []),
-                    workout_frequency=user_context_data.get('workout_frequency', 3),
-                    workout_duration=user_context_data.get('workout_duration', 60),
-                    preferred_workout_types=user_context_data.get('preferred_workout_types', []),
-                    equipment_access=user_context_data.get('equipment_access', []),
-                    limitations_injuries=user_context_data.get('limitations_injuries', []),
-                    additional_info=user_context_data.get('additional_info', '')
-                )
-                
-                # Generate the fitness program
-                fitness_program = orchestrator.create_fitness_program(user_context)
-                program_data = fitness_program.to_dict() if fitness_program else None
-                
-                logger.info(f"Generated fitness program with {len(program_data.get('weeks', [])) if program_data else 0} weeks")
-            else:
-                logger.error("Failed to extract user context from Tally data")
-                program_data = None
+            # Pass the raw Tally data directly to the orchestrator
+            # The orchestrator will use parse_user_context() to properly create UserContext
+            fitness_program = orchestrator.create_fitness_program(tally_data)
+            program_data = fitness_program.to_dict() if fitness_program else None
+            
+            logger.info(f"Generated fitness program with {len(program_data.get('weeks', [])) if program_data else 0} weeks")
                 
         except Exception as e:
             logger.error(f"Error generating fitness program: {str(e)}")
