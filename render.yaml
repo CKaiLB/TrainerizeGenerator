@@ -3,8 +3,10 @@ services:
     name: trainerize-fitness-program
     env: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn webhook_server:app"
+    startCommand: "gunicorn webhook_server:app --timeout 180 --workers 1 --worker-class sync --worker-connections 1000 --max-requests 100 --max-requests-jitter 10 --preload"
     plan: free
+    healthCheckPath: /health
+    numInstances: 1
     envVars:
       - key: QDRANT_URL
         sync: false
@@ -19,4 +21,8 @@ services:
       - key: TRAINERIZE_PROGRAM_ADD
         sync: false
       - key: TRAINERIZE_AUTH
-        sync: false 
+        sync: false
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: WEB_CONCURRENCY
+        value: "1" 

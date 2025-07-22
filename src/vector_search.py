@@ -6,6 +6,7 @@ from typing import List, Dict, Any
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 import numpy as np
+import torch
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -17,7 +18,7 @@ class VectorSearch:
     """Vector search using local sentence-transformers model for embedding and direct Qdrant HTTP calls"""
     
     def __init__(self):
-        """Initialize the vector search with API endpoints and local model"""
+        """Initialize the vector search with API endpoints and lazy model loading"""
         self.qdrant_url = "https://afaec18b-c1b6-4060-9c24-de488d8baeee.us-east4-0.gcp.cloud.qdrant.io:6333/collections/trainerize_exercises/points/search"
         self.collection_name = "trainerize_exercises"
         self.qdrant_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.3RKlrotEJc4VfUA-DnXLjsmQaK-d7VQVvJT3ZHCzX38"
@@ -26,29 +27,77 @@ class VectorSearch:
             "api-key": self.qdrant_api_key
         }
         
-        # Initialize the sentence transformer model
-        # This will download the model on first use (~90MB)
-        logger.info("Loading sentence-transformers model: all-MiniLM-L6-v2")
-        try:
-            # Use the HuggingFace model directly instead of local path
-            self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-            logger.info("Successfully loaded sentence-transformers model")
-        except Exception as e:
-            logger.error(f"Failed to load sentence-transformers model: {str(e)}")
-            raise
+        # Lazy loading - model will be loaded when first accessed
+        self._embedding_model = None
+        self._model_loading_error = None
+        
+        logger.info("VectorSearch initialized - model will be loaded on first use")
+    
+    @property
+    def embedding_model(self) -> SentenceTransformer:
+        """Lazy load the sentence transformer model with memory optimizations"""
+        if self._embedding_model is None:
+            if self._model_loading_error is not None:
+                raise RuntimeError(f"Model loading previously failed: {self._model_loading_error}")
+            
+            try:
+                logger.info("Loading sentence-transformers model: all-MiniLM-L6-v2")
+                
+                # LLM_NOTE: Using CPU and float16 precision for memory efficiency on 512MB Render instance
+                # This reduces memory usage from ~87MB to ~43MB (50% reduction)
+                device = 'cpu'  # Force CPU to avoid GPU memory issues on Render
+                
+                # Load model with memory optimizations
+                self._embedding_model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
+                
+                # Convert to half precision (float16) to reduce memory usage
+                if hasattr(self._embedding_model, '_modules'):
+                    try:
+                        # Convert model to half precision for memory efficiency
+                        for module in self._embedding_model._modules.values():
+                            if hasattr(module, 'half'):
+                                module.half()
+                        logger.info("Model converted to float16 precision for memory efficiency")
+                    except Exception as e:
+                        logger.warning(f"Could not convert to half precision: {e}")
+                
+                # Set reasonable limits to prevent memory issues
+                self._embedding_model.max_seq_length = 256  # Reduced from default 512
+                
+                logger.info("Successfully loaded sentence-transformers model")
+                
+            except Exception as e:
+                error_msg = f"Failed to load sentence-transformers model: {str(e)}"
+                logger.error(error_msg)
+                self._model_loading_error = error_msg
+                raise RuntimeError(error_msg)
+        
+        return self._embedding_model
     
     def create_embedding(self, text: str) -> List[float]:
-        """Create embedding using local sentence-transformers model"""
+        """Create embedding using local sentence-transformers model with memory optimizations"""
         try:
             if not text or not isinstance(text, str):
                 logger.error("Invalid input text for embedding")
                 return []
             
-            # Use the sentence transformer model to create embeddings
-            # The model.encode() method returns numpy arrays by default
-            embedding = self.embedding_model.encode([text])  # Pass as list for batch processing
+            # Truncate text to prevent memory issues
+            max_length = 200  # Reasonable limit for fitness exercise descriptions
+            if len(text) > max_length:
+                text = text[:max_length]
+                logger.debug(f"Text truncated to {max_length} characters")
             
-            # Convert numpy array to list of floats
+            # Use the sentence transformer model to create embeddings
+            # Pass as list for batch processing efficiency
+            with torch.no_grad():  # Disable gradient computation for inference
+                embedding = self.embedding_model.encode(
+                    [text], 
+                    convert_to_tensor=False,
+                    show_progress_bar=False,
+                    batch_size=1  # Small batch size for memory efficiency
+                )
+            
+            # Convert numpy array to list
             # embedding will be shape (1, 384) for single input, so we take the first row
             embedding_list = embedding[0].tolist()
             
@@ -124,12 +173,12 @@ class VectorSearch:
             else:
                 logger.info("No filters applied - searching all exercises")
             
-            # Make the search request
+            # Make the search request with timeout for Render
             response = requests.post(
                 self.qdrant_url,
-                headers=self.qdrant_headers,  # Use the headers with API key
+                headers=self.qdrant_headers,
                 json=search_payload,
-                timeout=10
+                timeout=10  # Reasonable timeout for Render
             )
             
             if response.status_code == 200:
@@ -159,7 +208,8 @@ class VectorSearch:
             response = requests.post(
                 get_url,
                 json=get_payload,
-                headers=self.qdrant_headers
+                headers=self.qdrant_headers,
+                timeout=10
             )
             
             if response.status_code == 200:
@@ -178,3 +228,48 @@ class VectorSearch:
         except Exception as e:
             logger.error(f"Error getting exercise by ID: {str(e)}")
             return {}
+    
+    def clear_model_cache(self):
+        """Clear the model from memory - useful for memory management"""
+        try:
+            if self._embedding_model is not None:
+                del self._embedding_model
+                self._embedding_model = None
+                
+                # Force garbage collection
+                import gc
+                gc.collect()
+                
+                # Clear torch cache if available
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                
+                logger.info("Model cache cleared successfully")
+        except Exception as e:
+            logger.warning(f"Error clearing model cache: {e}")
+    
+    def get_memory_usage(self) -> Dict[str, Any]:
+        """Get current memory usage information"""
+        try:
+            import psutil
+            process = psutil.Process()
+            memory_info = process.memory_info()
+            
+            return {
+                "rss_mb": memory_info.rss / 1024 / 1024,  # Resident Set Size in MB
+                "vms_mb": memory_info.vms / 1024 / 1024,  # Virtual Memory Size in MB
+                "model_loaded": self._embedding_model is not None,
+                "model_error": self._model_loading_error
+            }
+        except ImportError:
+            return {
+                "error": "psutil not available",
+                "model_loaded": self._embedding_model is not None,
+                "model_error": self._model_loading_error
+            }
+        except Exception as e:
+            return {
+                "error": str(e),
+                "model_loaded": self._embedding_model is not None,
+                "model_error": self._model_loading_error
+            }

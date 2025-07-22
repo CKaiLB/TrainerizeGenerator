@@ -9,6 +9,7 @@ import json
 import time
 import requests
 import logging
+import threading
 from datetime import datetime
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
@@ -17,9 +18,9 @@ from dotenv import load_dotenv
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
 # Import using absolute imports to avoid relative import issues
-from fitness_program_orchestrator import FitnessProgramOrchestrator
-from trainerize_workout_creator import TrainerizeWorkoutCreator
-from trainerize_training_program_creator import TrainerizeTrainingProgramCreator
+from src.fitness_program_orchestrator import FitnessProgramOrchestrator
+from src.trainerize_workout_creator import TrainerizeWorkoutCreator
+from src.trainerize_training_program_creator import TrainerizeTrainingProgramCreator
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -29,6 +30,14 @@ load_dotenv()
 
 app = Flask(__name__)
 
+# Global model loading status to prevent timeouts
+_model_loading_status = {
+    "loaded": False,
+    "loading": False,
+    "error": None,
+    "start_time": None
+}
+
 # Trainerize API configuration
 TRAINERIZE_API_URL = os.environ.get('TRAINERIZE_FIND')
 TRAINERIZE_AUTH = os.environ.get('TRAINERIZE_AUTH')
@@ -37,6 +46,65 @@ TRAINERIZE_HEADERS = {
     'authorization': TRAINERIZE_AUTH,
     'content-type': 'application/json'
 }
+
+def preload_vector_search_model():
+    """Preload the vector search model in the background to avoid timeouts"""
+    global _model_loading_status
+    try:
+        _model_loading_status["loading"] = True
+        _model_loading_status["start_time"] = time.time()
+        logger.info("Preloading vector search model...")
+        
+        from src.vector_search import VectorSearch
+        vector_search = VectorSearch()
+        # Trigger model loading by accessing the property
+        _ = vector_search.embedding_model
+        
+        _model_loading_status["loaded"] = True
+        _model_loading_status["loading"] = False
+        _model_loading_status["error"] = None
+        
+        load_time = time.time() - _model_loading_status["start_time"]
+        logger.info(f"Vector search model preloaded successfully in {load_time:.2f} seconds")
+    except Exception as e:
+        _model_loading_status["loading"] = False
+        _model_loading_status["error"] = str(e)
+        logger.error(f"Failed to preload vector search model: {str(e)}")
+
+# Start model preloading in background thread on server startup
+preload_thread = threading.Thread(target=preload_vector_search_model, daemon=True)
+preload_thread.start()
+
+@app.route('/model-status', methods=['GET'])
+def model_status():
+    """Check the status of model loading"""
+    global _model_loading_status
+    
+    # If model is not loaded and no error, try to load it
+    if not _model_loading_status["loaded"] and not _model_loading_status["error"]:
+        try:
+            logger.info("Attempting to load model on demand...")
+            from src.vector_search import VectorSearch
+            vector_search = VectorSearch()
+            _ = vector_search.embedding_model
+            _model_loading_status["loaded"] = True
+            _model_loading_status["error"] = None
+            logger.info("Model loaded successfully on demand")
+        except Exception as e:
+            logger.error(f"Failed to load model on demand: {str(e)}")
+            _model_loading_status["error"] = str(e)
+    
+    status = {
+        "model_loaded": _model_loading_status["loaded"],
+        "model_loading": _model_loading_status["loading"],
+        "model_error": _model_loading_status["error"],
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    if _model_loading_status["start_time"]:
+        status["load_time"] = time.time() - _model_loading_status["start_time"]
+    
+    return jsonify(status), 200
 
 def extract_full_name_from_tally_data(tally_data):
     """Extract the full name from Tally survey data"""
@@ -163,17 +231,38 @@ def extract_user_id_from_trainerize_response(trainerize_result):
         return None
 
 def process_tally_webhook(tally_data):
-    """Process Tally webhook data and generate fitness program"""
+    """Process the Tally webhook data and generate fitness program"""
     try:
         logger.info("Processing Tally webhook data")
+        
+        # Check if model is loaded before processing
+        if not _model_loading_status["loaded"]:
+            if _model_loading_status["loading"]:
+                # Wait for model to load (max 60 seconds)
+                wait_start = time.time()
+                while _model_loading_status["loading"] and (time.time() - wait_start) < 60:
+                    time.sleep(1)
+                
+                if not _model_loading_status["loaded"]:
+                    logger.error("Model loading timed out")
+                    return {
+                        "status": "error",
+                        "message": "Model loading timed out. Please try again.",
+                        "model_status": _model_loading_status
+                    }
+            else:
+                logger.error("Model not loaded and not loading")
+                return {
+                    "status": "error", 
+                    "message": "Model not available. Please check /model-status endpoint.",
+                    "model_status": _model_loading_status
+                }
         
         # Extract full name from Tally data
         full_name = extract_full_name_from_tally_data(tally_data)
         if not full_name:
-            return {
-                "error": "Could not extract full name from Tally data",
-                "status": "failed"
-            }
+            logger.error("Could not extract full name from Tally data")
+            return {"status": "error", "message": "Could not extract user name from form data"}
         
         logger.info(f"Extracted full name: {full_name}")
         
@@ -181,7 +270,7 @@ def process_tally_webhook(tally_data):
         logger.info("Waiting 30 seconds before calling Trainerize API...")
         time.sleep(30)
         
-        # Call Trainerize API to find user
+        # Find user in Trainerize
         trainerize_result = find_user_in_trainerize(full_name)
         
         # Extract user ID from Trainerize response
@@ -189,6 +278,7 @@ def process_tally_webhook(tally_data):
         logger.info(f"Final extracted user ID: {user_id}")
         
         # Generate fitness program using the orchestrator
+        logger.info("Starting fitness program generation...")
         orchestrator = FitnessProgramOrchestrator()
         fitness_program = orchestrator.create_fitness_program(tally_data)
         
@@ -237,95 +327,71 @@ def process_tally_webhook(tally_data):
             
             # Get exercise matches from the program data
             exercise_matches = program_data.get("exercise_matches", [])
-            logger.info(f"Found {len(exercise_matches)} exercise matches for workout creation")
             
             if exercise_matches:
-                # Get user context from the fitness program and create UserContext object
-                user_context_dict = program_data.get("user_context", {})
-                logger.info(f"User context dict: {user_context_dict}")
+                logger.info(f"Found {len(exercise_matches)} exercise matches for workout creation")
                 
-                # Create UserContext object from the dictionary
-                from user_context_parser import UserContext
-                user_context = UserContext(
-                    first_name=user_context_dict.get('first_name', ''),
-                    last_name=user_context_dict.get('last_name', ''),
-                    email=user_context_dict.get('email', ''),
-                    phone=user_context_dict.get('phone', ''),
-                    social_handle=user_context_dict.get('social_handle', ''),
-                    address=user_context_dict.get('address', ''),
-                    country=user_context_dict.get('country', ''),
-                    date_of_birth=user_context_dict.get('date_of_birth', ''),
-                    sex_at_birth=user_context_dict.get('sex_at_birth', ''),
-                    height=user_context_dict.get('height', ''),
-                    weight=user_context_dict.get('weight', ''),
-                    age=user_context_dict.get('age', 0),
-                    top_fitness_goal=user_context_dict.get('top_fitness_goal', ''),
-                    goal_classification=user_context_dict.get('goal_classification', []),
-                    holding_back=user_context_dict.get('holding_back', ''),
-                    activity_level=user_context_dict.get('activity_level', ''),
-                    health_conditions=user_context_dict.get('health_conditions', ''),
-                    food_allergies=user_context_dict.get('food_allergies', ''),
-                    daily_eating_pattern=user_context_dict.get('daily_eating_pattern', ''),
-                    favorite_foods=user_context_dict.get('favorite_foods', ''),
-                    disliked_foods=user_context_dict.get('disliked_foods', ''),
-                    meals_per_day=user_context_dict.get('meals_per_day', ''),
-                    metabolism_rating=user_context_dict.get('metabolism_rating', 5),
-                    nutrition_history=user_context_dict.get('nutrition_history', ''),
-                    macro_familiarity=user_context_dict.get('macro_familiarity', 1),
-                    exercise_days_per_week=user_context_dict.get('exercise_days_per_week', 3),
-                    exercise_days=user_context_dict.get('exercise_days', ['Monday', 'Wednesday', 'Friday']),
-                    preferred_workout_length=user_context_dict.get('preferred_workout_length', ''),
-                    start_date=user_context_dict.get('start_date', ''),
-                    habits_to_destroy=user_context_dict.get('habits_to_destroy', []),
-                    habits_to_build=user_context_dict.get('habits_to_build', [])
-                )
+                # Create workouts for each training plan
+                for result in training_program_results:
+                    if result.get("success") and result.get("training_plan_id"):
+                        training_plan_id = result["training_plan_id"]
+                        focus_area_name = result["focus_area_name"]
+                        
+                        # Filter exercise matches for this focus area
+                        focus_area_exercises = [
+                            match for match in exercise_matches 
+                            if match.get("focus_area_name") == focus_area_name
+                        ]
+                        
+                        if focus_area_exercises:
+                            logger.info(f"Creating workouts for focus area '{focus_area_name}' with training plan ID {training_plan_id}")
+                            
+                            # Create workouts for this training plan
+                            area_workout_results = workout_creator.create_workouts_for_training_plan(
+                                user_id,
+                                training_plan_id,
+                                focus_area_exercises,
+                                focus_area_name
+                            )
+                            
+                            workout_results.extend(area_workout_results)
+                            logger.info(f"Created {len(area_workout_results)} workouts for focus area '{focus_area_name}'")
+                        else:
+                            logger.warning(f"No exercises found for focus area '{focus_area_name}'")
+                    else:
+                        logger.warning(f"Failed to create training program: {result}")
                 
-                # Create mapping of focus area names to training plan IDs
-                training_plan_ids = {}
-                for program_result in training_program_results:
-                    if program_result.get("status") == "success":
-                        focus_area = program_result.get("focus_area", "")
-                        training_plan_id = program_result.get("training_plan_id", "")
-                        if focus_area and training_plan_id:
-                            training_plan_ids[focus_area] = training_plan_id
-                            logger.info(f"Mapped focus area '{focus_area}' to training plan ID: {training_plan_id}")
-                
-                # Create workouts (5 exercises per workout) with user context and training plan IDs
-                workout_results = workout_creator.create_workouts_for_focus_areas(
-                    user_id, 
-                    exercise_matches, 
-                    user_context,  # Pass user context for exercise days
-                    exercises_per_workout=5,
-                    training_plan_ids=training_plan_ids  # Pass training plan IDs
-                )
-                logger.info(f"Created {len(workout_results)} workouts in Trainerize")
             else:
                 logger.warning("No exercise matches found for workout creation")
-        else:
-            logger.warning("No user ID available for training program and workout creation")
         
-        # Create enhanced response with focus areas, exercise matches, and workout results
+        else:
+            logger.warning("No user ID found, skipping Trainerize workout creation")
+        
+        # Prepare response
         response_data = {
             "status": "success",
             "full_name": full_name,
             "user_id": user_id,
             "trainerize_result": trainerize_result,
             "fitness_program": program_data,
-            "focus_areas": program_data.get("focus_areas", []),
-            "exercise_matches": program_data.get("exercise_matches", []),
-            "weekly_plan": program_data.get("weekly_plan", {}),
-            "training_program_results": training_program_results,
-            "workout_results": workout_results,
-            "created_at": datetime.now().isoformat()
+            "training_programs": training_program_results,
+            "workouts": workout_results,
+            "created_at": datetime.now().isoformat(),
+            "model_status": _model_loading_status
         }
         
+        logger.info(f"Successfully processed webhook for {full_name}")
         return response_data
         
     except Exception as e:
-        logger.error(f"Error processing webhook: {str(e)}")
+        logger.error(f"Error processing Tally webhook: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return {
-            "error": str(e),
-            "status": "failed"
+            "status": "error",
+            "message": str(e),
+            "model_status": _model_loading_status,
+            "created_at": datetime.now().isoformat()
         }
 
 @app.route('/webhook/tally', methods=['POST'])
@@ -352,11 +418,53 @@ def tally_webhook():
         logger.error(f"Webhook error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/memory-status', methods=['GET'])
+def memory_status():
+    """Check memory usage and model status"""
+    try:
+        from src.vector_search import VectorSearch
+        
+        # Get memory info from the VectorSearch instance if available
+        try:
+            vector_search = VectorSearch()
+            memory_info = vector_search.get_memory_usage()
+        except Exception as e:
+            memory_info = {"error": f"Could not get VectorSearch memory info: {str(e)}"}
+        
+        # Get system memory info
+        try:
+            import psutil
+            system_memory = psutil.virtual_memory()
+            system_info = {
+                "total_mb": system_memory.total / 1024 / 1024,
+                "available_mb": system_memory.available / 1024 / 1024,
+                "used_mb": system_memory.used / 1024 / 1024,
+                "percent_used": system_memory.percent
+            }
+        except Exception as e:
+            system_info = {"error": f"Could not get system memory info: {str(e)}"}
+        
+        return jsonify({
+            "timestamp": datetime.now().isoformat(),
+            "model_status": _model_loading_status,
+            "vector_search_memory": memory_info,
+            "system_memory": system_info
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
+    """Health check endpoint with model status"""
     return jsonify({
         "status": "healthy",
+        "model_loaded": _model_loading_status["loaded"],
+        "model_loading": _model_loading_status["loading"], 
+        "model_error": _model_loading_status["error"],
         "timestamp": datetime.now().isoformat()
     }), 200
 
@@ -375,4 +483,18 @@ def root():
 if __name__ == '__main__':
     # Run the Flask app
     port = int(os.environ.get('PORT', 6000))
+    
+    # Wait for model to load before starting server (max 60 seconds)
+    logger.info("Waiting for model to load before starting server...")
+    wait_start = time.time()
+    while _model_loading_status["loading"] and (time.time() - wait_start) < 60:
+        time.sleep(1)
+    
+    if _model_loading_status["loaded"]:
+        logger.info("Model loaded successfully, starting server...")
+    elif _model_loading_status["error"]:
+        logger.warning(f"Model failed to load ({_model_loading_status['error']}), starting server anyway...")
+    else:
+        logger.warning("Model loading timed out, starting server anyway...")
+    
     app.run(host='0.0.0.0', port=port, debug=True) 

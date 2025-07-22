@@ -1,1 +1,1 @@
-web: gunicorn webhook_server:app --timeout 120 --workers 2 --worker-class sync 
+web: gunicorn webhook_server:app --timeout 180 --workers 1 --worker-class sync --worker-connections 1000 --max-requests 100 --max-requests-jitter 10 --preload 
