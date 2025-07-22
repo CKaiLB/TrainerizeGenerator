@@ -27,13 +27,13 @@ def test_webhook():
                     "key": "question_zMWrpa",
                     "label": "First Name",
                     "type": "INPUT_TEXT",
-                    "value": "Timmy"
+                    "value": "Kai"
                 },
                 {
                     "key": "question_59EG66",
                     "label": "Last Name",
                     "type": "INPUT_TEXT",
-                    "value": "Explorer"
+                    "value": "LB"
                 },
                 {
                     "key": "question_WReGQL",
