@@ -30,6 +30,7 @@ class VectorSearch:
         # This will download the model on first use (~90MB)
         logger.info("Loading sentence-transformers model: all-MiniLM-L6-v2")
         try:
+            # Use the HuggingFace model directly instead of local path
             self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
             logger.info("Successfully loaded sentence-transformers model")
         except Exception as e:
