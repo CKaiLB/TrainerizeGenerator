@@ -186,4 +186,64 @@ class TrainerizeTrainingProgramCreator:
             return json.dumps(training_program_results, indent=2)
         except Exception as e:
             logger.error(f"Error exporting training program results to JSON: {str(e)}")
-            return "[]" 
+            return "[]"
+    
+    def create_training_programs_from_fitness_program(self, fitness_program: Any, user_id: str) -> List[Dict[str, Any]]:
+        """Create training programs from a FitnessProgram object"""
+        try:
+            if not fitness_program:
+                logger.error("No fitness program provided")
+                return []
+            
+            if not user_id:
+                logger.error("No user ID provided")
+                return []
+            
+            # Extract focus areas from fitness program
+            focus_areas = []
+            if hasattr(fitness_program, 'focus_areas') and fitness_program.focus_areas:
+                for area in fitness_program.focus_areas:
+                    if isinstance(area, dict) and 'area_name' in area:
+                        focus_areas.append(area['area_name'])
+                    elif hasattr(area, 'area_name'):
+                        focus_areas.append(area.area_name)
+            
+            if not focus_areas:
+                logger.error("No focus areas found in fitness program")
+                return []
+            
+            # Extract user information
+            user_first_name = ""
+            user_last_name = ""
+            user_start_date = ""
+            
+            if hasattr(fitness_program, 'user_context') and fitness_program.user_context:
+                user_context = fitness_program.user_context
+                if isinstance(user_context, dict):
+                    user_first_name = user_context.get('first_name', '')
+                    user_last_name = user_context.get('last_name', '')
+                    user_start_date = user_context.get('start_date', '')
+                elif hasattr(user_context, 'first_name'):
+                    user_first_name = user_context.first_name
+                    user_last_name = user_context.last_name
+                    user_start_date = user_context.start_date
+            
+            # Use start_date from fitness program if not found in user_context
+            if not user_start_date and hasattr(fitness_program, 'start_date'):
+                user_start_date = fitness_program.start_date
+            
+            logger.info(f"Creating training programs for user {user_id} with {len(focus_areas)} focus areas")
+            logger.info(f"Focus areas: {focus_areas}")
+            
+            # Create training programs for each focus area
+            return self.create_training_programs_for_focus_areas(
+                user_id, 
+                focus_areas, 
+                user_start_date, 
+                user_first_name, 
+                user_last_name
+            )
+            
+        except Exception as e:
+            logger.error(f"Error creating training programs from fitness program: {str(e)}")
+            return [] 

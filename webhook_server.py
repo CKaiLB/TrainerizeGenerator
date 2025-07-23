@@ -539,22 +539,21 @@ def process_tally_webhook(tally_data):
             # Pass the raw Tally data directly to the orchestrator
             # The orchestrator will use parse_user_context() to properly create UserContext
             fitness_program = orchestrator.create_fitness_program(tally_data)
-            program_data = fitness_program.to_dict() if fitness_program else None
             
-            logger.info(f"Generated fitness program with {len(program_data.get('weeks', [])) if program_data else 0} weeks")
+            logger.info(f"Generated fitness program with {len(fitness_program.focus_areas) if fitness_program else 0} focus areas")
                 
         except Exception as e:
             logger.error(f"Error generating fitness program: {str(e)}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
-            program_data = None
+            fitness_program = None
         
         # Initialize results
         workout_results = []
         training_program_results = []
         
         # Only proceed with Trainerize operations if we have a user ID
-        if user_id and program_data:
+        if user_id and fitness_program:
             try:
                 # Create training programs in Trainerize
                 logger.info("Creating training programs in Trainerize...")
@@ -570,15 +569,28 @@ def process_tally_webhook(tally_data):
                 
                 # Get exercise matches from the fitness program
                 exercise_matches = []
-                if fitness_program and hasattr(fitness_program, 'weeks'):
-                    for week in fitness_program.weeks:
-                        for workout in week.workouts:
-                            if hasattr(workout, 'exercise_matches'):
-                                exercise_matches.extend(workout.exercise_matches)
+                if fitness_program and hasattr(fitness_program, 'exercise_matches'):
+                    exercise_matches = fitness_program.exercise_matches
                 
                 if exercise_matches:
-                    workout_results = workout_creator.create_workouts_from_exercise_matches(
-                        exercise_matches, user_id
+                    # Create a mapping of focus areas to training plan IDs
+                    training_plan_ids = {}
+                    for program_result in training_program_results:
+                        if program_result.get('status') == 'success':
+                            focus_area = program_result.get('focus_area', '')
+                            training_plan_id = program_result.get('training_plan_id', '')
+                            if focus_area and training_plan_id:
+                                training_plan_ids[focus_area] = training_plan_id
+                    
+                    logger.info(f"Training plan ID mapping: {training_plan_ids}")
+                    
+                    # Create workouts with proper training plan ID mapping
+                    workout_results = workout_creator.create_workouts_for_focus_areas(
+                        user_id=user_id,
+                        exercise_matches=exercise_matches,
+                        user_context=fitness_program.user_context,
+                        exercises_per_workout=5,
+                        training_plan_ids=training_plan_ids
                     )
                     logger.info(f"Created {len(workout_results)} workouts")
                 else:
@@ -598,7 +610,6 @@ def process_tally_webhook(tally_data):
             "full_name": full_name,
             "user_id": user_id,
             "trainerize_result": trainerize_result,
-            "fitness_program": program_data,
             "training_programs": training_program_results,
             "workouts": workout_results,
             "created_at": datetime.now().isoformat(),

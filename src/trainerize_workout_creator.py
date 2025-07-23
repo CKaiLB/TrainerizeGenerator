@@ -236,4 +236,120 @@ class TrainerizeWorkoutCreator:
             return json.dumps(workout_results, indent=2)
         except Exception as e:
             logger.error(f"Error exporting workout results to JSON: {str(e)}")
-            return "[]" 
+            return "[]"
+    
+    def create_workouts_from_exercise_matches(self, exercise_matches: List[Any], user_id: str) -> List[Dict[str, Any]]:
+        """Create workouts from exercise matches with proper ID mapping"""
+        try:
+            if not exercise_matches:
+                logger.error("No exercise matches provided")
+                return []
+            
+            if not user_id:
+                logger.error("No user ID provided")
+                return []
+            
+            # Convert exercise matches to proper format
+            exercise_matches_dict = []
+            for match in exercise_matches:
+                if hasattr(match, '__dict__'):
+                    # Handle dataclass objects
+                    match_dict = {
+                        'focus_area_name': getattr(match, 'focus_area_name', 'Unknown'),
+                        'exercise_id': getattr(match, 'exercise_id', ''),
+                        'exercise_name': getattr(match, 'exercise_name', ''),
+                        'exercise_description': getattr(match, 'exercise_description', ''),
+                        'exercise_category': getattr(match, 'exercise_category', ''),
+                        'exercise_equipment': getattr(match, 'exercise_equipment', []),
+                        'exercise_muscle_groups': getattr(match, 'exercise_muscle_groups', []),
+                        'exercise_difficulty': getattr(match, 'exercise_difficulty', ''),
+                        'match_score': getattr(match, 'match_score', 0.0),
+                        'priority_level': getattr(match, 'priority_level', 1)
+                    }
+                elif isinstance(match, dict):
+                    # Handle dictionary objects
+                    match_dict = match
+                else:
+                    logger.warning(f"Unknown exercise match format: {type(match)}")
+                    continue
+                
+                exercise_matches_dict.append(match_dict)
+            
+            if not exercise_matches_dict:
+                logger.error("No valid exercise matches found")
+                return []
+            
+            logger.info(f"Creating workouts for user {user_id} with {len(exercise_matches_dict)} exercise matches")
+            
+            # Group exercises by focus area
+            grouped_exercises = {}
+            for match in exercise_matches_dict:
+                focus_area = match.get('focus_area_name', 'Unknown')
+                if focus_area not in grouped_exercises:
+                    grouped_exercises[focus_area] = []
+                grouped_exercises[focus_area].append(match)
+            
+            created_workouts = []
+            
+            # Create workouts for each focus area
+            for focus_area, exercises in grouped_exercises.items():
+                logger.info(f"Creating workout for focus area: {focus_area} with {len(exercises)} exercises")
+                
+                # Create workout with exercises
+                workout_result = self.create_workout_with_exercises(
+                    user_id=user_id,
+                    focus_area=focus_area,
+                    exercises=exercises,
+                    exercises_per_workout=5  # Default to 5 exercises per workout
+                )
+                
+                if workout_result.get('status') == 'success':
+                    created_workouts.append(workout_result)
+                    logger.info(f"Successfully created workout: {workout_result.get('workout_name')}")
+                else:
+                    logger.error(f"Failed to create workout for {focus_area}: {workout_result.get('error')}")
+            
+            logger.info(f"Created {len(created_workouts)} workouts for user {user_id}")
+            return created_workouts
+            
+        except Exception as e:
+            logger.error(f"Error creating workouts from exercise matches: {str(e)}")
+            return []
+    
+    def create_workout_with_exercises(self, user_id: str, focus_area: str, exercises: List[Dict[str, Any]], exercises_per_workout: int = 5) -> Dict[str, Any]:
+        """Create a single workout with exercises for a specific focus area"""
+        try:
+            if not exercises:
+                return {"error": "No exercises provided", "status": "failed"}
+            
+            # Take the first N exercises for this workout
+            workout_exercises = exercises[:exercises_per_workout]
+            
+            # Create workout name
+            workout_name = f"{focus_area} Workout"
+            
+            # Create instructions
+            instructions = f"Focus on {focus_area}. Complete each exercise with proper form and controlled movements."
+            
+            # Extract exercise IDs
+            exercise_ids = []
+            for exercise in workout_exercises:
+                exercise_id = exercise.get('exercise_id', '')
+                if exercise_id:
+                    exercise_ids.append(str(exercise_id))
+            
+            if not exercise_ids:
+                return {"error": "No valid exercise IDs found", "status": "failed"}
+            
+            # Create workout using existing method
+            return self.create_workout_from_exercises(
+                user_id=user_id,
+                exercises=workout_exercises,
+                focus_area=focus_area,
+                workout_name=workout_name,
+                training_plan_id=None  # No training plan ID for this specific workout
+            )
+            
+        except Exception as e:
+            logger.error(f"Error creating workout with exercises: {str(e)}")
+            return {"error": str(e), "status": "failed"} 

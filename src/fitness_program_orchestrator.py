@@ -24,6 +24,20 @@ class FitnessProgram:
     weekly_plan: Dict[str, Any]
     created_at: str
     user_context: Dict[str, Any]
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert FitnessProgram to dictionary format for JSON serialization"""
+        return {
+            "client_name": self.client_name,
+            "program_name": self.program_name,
+            "start_date": self.start_date,
+            "total_weeks": self.total_weeks,
+            "focus_areas": self.focus_areas,
+            "exercise_matches": self.exercise_matches,
+            "weekly_plan": self.weekly_plan,
+            "created_at": self.created_at,
+            "user_context": self.user_context
+        }
 
 class FitnessProgramOrchestrator:
     """Main orchestrator for creating 16-week fitness programs"""
