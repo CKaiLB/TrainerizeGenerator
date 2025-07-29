@@ -1,0 +1,29 @@
+# Trainerize API Configuration Template
+# Copy this to .env and fill in your actual values
+
+# Required environment variables
+TRAINERIZE_AUTH=your_auth_token_here
+TRAINERIZE_FIND=your_find_api_url_here
+
+# Optional environment variables (with defaults)
+# If not set, these will use the default Trainerize API endpoints
+TRAINERIZE_CLIENT_LIST_URL=https://api.trainerize.com/v03/user/getClientList
+TRAINERIZE_MASS_MESSAGE_URL=https://api.trainerize.com/v03/message/sendMass
+
+# Other existing environment variables
+OPENAI_API_KEY=your_openai_api_key_here
+QDRANT_URL=your_qdrant_url_here
+QDRANT_API_KEY=your_qdrant_api_key_here
+
+# Trainerize additional endpoints (if different from defaults)
+TRAINERIZE_PROGRAM_ADD=your_program_add_url_here
+TRAINERIZE_WORKOUT_ADD=your_workout_add_url_here
+
+# Server configuration
+PORT=6000
+
+# Instructions:
+# 1. Copy this file to .env
+# 2. Replace 'your_*_here' with actual values
+# 3. The optional variables can be omitted if using default endpoints
+# 4. Keep your .env file secure and never commit it to version control 

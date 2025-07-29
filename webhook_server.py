@@ -51,6 +51,10 @@ TRAINERIZE_HEADERS = {
     'content-type': 'application/json'
 }
 
+# Additional Trainerize API endpoints
+TRAINERIZE_CLIENT_LIST_URL = os.environ.get('TRAINERIZE_CLIENT_LIST_URL')
+TRAINERIZE_MASS_MESSAGE_URL = os.environ.get('TRAINERIZE_MASS_MESSAGE_URL')
+
 def load_vector_search_model():
     """Load the vector search model in this worker process"""
     global _model_loading_status, _global_vector_search
@@ -454,6 +458,131 @@ def extract_user_id_from_trainerize_response(trainerize_result):
         logger.error(f"Error extracting user ID from Trainerize response: {str(e)}")
         return None
 
+def get_active_clients():
+    """Get list of active clients from Trainerize API"""
+    try:
+        payload = {
+            "userID": 23372308,
+            "view": "activeClient",
+            "start": 0,
+            "count": 100
+        }
+        
+        logger.info("Fetching active clients from Trainerize API")
+        logger.info(f"API Payload: {json.dumps(payload, indent=2)}")
+        
+        response = requests.post(
+            TRAINERIZE_CLIENT_LIST_URL,
+            headers=TRAINERIZE_HEADERS,
+            json=payload
+        )
+        
+        logger.info(f"Trainerize client list API response status: {response.status_code}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            logger.info(f"Successfully retrieved {len(result.get('users', []))} active clients")
+            return result
+        else:
+            logger.error(f"Trainerize client list API error: {response.status_code} - {response.text}")
+            return None
+            
+    except Exception as e:
+        logger.error(f"Error calling Trainerize client list API: {str(e)}")
+        return None
+
+def send_weekly_checkin_messages(clients_data):
+    """Send weekly check-in messages to all active clients"""
+    try:
+        if not clients_data or 'users' not in clients_data:
+            logger.error("No clients data provided for mass messaging")
+            return {"status": "error", "message": "No clients data provided"}
+        
+        users = clients_data.get('users', [])
+        if not users:
+            logger.warning("No active clients found for weekly check-in")
+            return {"status": "success", "message": "No active clients to message", "clients_count": 0}
+        
+        # Extract user IDs and create recipient list
+        recipients = []
+        client_names = {}
+        
+        for user in users:
+            user_id = user.get('id')
+            first_name = user.get('firstName', '')
+            last_name = user.get('lastName', '')
+            
+            if user_id and user_id != 23372308:  # Exclude the trainer ID
+                recipients.append(str(user_id))
+                client_names[str(user_id)] = f"{first_name} {last_name}".strip()
+        
+        if not recipients:
+            logger.warning("No valid recipients found for weekly check-in")
+            return {"status": "success", "message": "No valid recipients found", "clients_count": 0}
+        
+        # Create personalized message body
+        message_body = """Hey! Hope you had a great weekend. It's time for your quick weekly check-in so I can keep supporting you and making sure we're on track. Just reply directly to this message with your answers. short and honest is perfect!
+
+How would you rate last week overall? (1–10)
+How many workouts did you complete?
+Did you stick to your nutrition plan 80% or more?
+Any meals or situations where you felt off track?
+How was your energy, mood, and sleep last week?
+What was your biggest win?
+What was your biggest challenge?
+Anything you're feeling stuck or unsure about?
+Anything you'd like to see more of in your plan?
+Any questions, concerns, or feedback for me?"""
+        
+        # Create API payload for mass message
+        payload = {
+            "userID": 23372308,
+            "recipients": recipients,
+            "body": message_body,
+            "type": "text",
+            "threadType": "mainThread",
+            "conversationType": "single"
+        }
+        
+        logger.info(f"Sending weekly check-in messages to {len(recipients)} clients")
+        logger.info(f"Recipients: {recipients}")
+        logger.info(f"API Payload: {json.dumps(payload, indent=2)}")
+        
+        response = requests.post(
+            TRAINERIZE_MASS_MESSAGE_URL,
+            headers=TRAINERIZE_HEADERS,
+            json=payload
+        )
+        
+        logger.info(f"Trainerize mass message API response status: {response.status_code}")
+        logger.info(f"Trainerize mass message API response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            logger.info(f"Successfully sent weekly check-in messages to {len(recipients)} clients")
+            return {
+                "status": "success",
+                "message": f"Successfully sent weekly check-in messages to {len(recipients)} clients",
+                "clients_count": len(recipients),
+                "recipients": recipients,
+                "client_names": client_names,
+                "response": result
+            }
+        else:
+            logger.error(f"Trainerize mass message API error: {response.status_code} - {response.text}")
+            return {
+                "status": "error",
+                "message": f"Trainerize mass message API error: {response.status_code}",
+                "response_text": response.text
+            }
+            
+    except Exception as e:
+        logger.error(f"Error sending weekly check-in messages: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
 def process_tally_webhook(tally_data):
     """Process the Tally webhook data and generate fitness program"""
     try:
@@ -657,6 +786,108 @@ def tally_webhook():
         logger.error(f"Webhook error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/monday', methods=['POST'])
+def monday_weekly_checkin():
+    """Handle Monday weekly check-in for all active clients"""
+    try:
+        current_pid = os.getpid()
+        logger.info(f"Starting Monday weekly check-in process in worker PID {current_pid}")
+        
+        # Check if this is a test mode request
+        request_data = request.get_json() or {}
+        test_mode = request_data.get('test_mode', False)
+        target_user_id = request_data.get('target_user_id')
+        target_user_name = request_data.get('target_user_name', 'Test User')
+        
+        if test_mode and target_user_id:
+            logger.info(f"Test mode enabled - sending message only to {target_user_name} (ID: {target_user_id})")
+            
+            # Create test client data structure
+            test_clients_data = {
+                "users": [
+                    {
+                        "id": int(target_user_id),
+                        "firstName": target_user_name.split()[0] if ' ' in target_user_name else target_user_name,
+                        "lastName": target_user_name.split()[1] if ' ' in target_user_name else "",
+                        "email": "test@example.com",
+                        "type": "client",
+                        "status": "active"
+                    }
+                ],
+                "total": 1
+            }
+            
+            # Send test message
+            message_result = send_weekly_checkin_messages(test_clients_data)
+            
+            # Prepare response
+            response_data = {
+                "status": message_result.get("status", "unknown"),
+                "message": f"TEST MODE: {message_result.get('message', 'Unknown result')}",
+                "clients_count": message_result.get("clients_count", 0),
+                "recipients": message_result.get("recipients", []),
+                "client_names": message_result.get("client_names", {}),
+                "test_mode": True,
+                "target_user": target_user_name,
+                "worker_pid": current_pid,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            if message_result.get("status") == "success":
+                logger.info(f"TEST MODE: Successfully sent test message to {target_user_name} in worker PID {current_pid}")
+                return jsonify(response_data), 200
+            else:
+                logger.error(f"TEST MODE: Failed to send test message to {target_user_name} in worker PID {current_pid}: {message_result.get('message')}")
+                return jsonify(response_data), 500
+        
+        # Normal mode - get all active clients
+        logger.info("Step 1: Fetching active clients...")
+        clients_data = get_active_clients()
+        
+        if not clients_data:
+            error_msg = "Failed to retrieve active clients from Trainerize"
+            logger.error(error_msg)
+            return jsonify({
+                "status": "error",
+                "message": error_msg,
+                "worker_pid": current_pid,
+                "timestamp": datetime.now().isoformat()
+            }), 500
+        
+        # Step 2: Send weekly check-in messages to all clients
+        logger.info("Step 2: Sending weekly check-in messages...")
+        message_result = send_weekly_checkin_messages(clients_data)
+        
+        # Prepare response
+        response_data = {
+            "status": message_result.get("status", "unknown"),
+            "message": message_result.get("message", "Unknown result"),
+            "clients_count": message_result.get("clients_count", 0),
+            "recipients": message_result.get("recipients", []),
+            "client_names": message_result.get("client_names", {}),
+            "worker_pid": current_pid,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if message_result.get("status") == "success":
+            logger.info(f"Successfully completed Monday weekly check-in for {message_result.get('clients_count', 0)} clients in worker PID {current_pid}")
+            return jsonify(response_data), 200
+        else:
+            logger.error(f"Failed to complete Monday weekly check-in in worker PID {current_pid}: {message_result.get('message')}")
+            return jsonify(response_data), 500
+            
+    except Exception as e:
+        current_pid = os.getpid()
+        logger.error(f"Error in Monday weekly check-in process in worker PID {current_pid}: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "worker_pid": current_pid,
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
 @app.route('/memory-status', methods=['GET'])
 def memory_status():
     """Check memory usage and model status"""
@@ -722,6 +953,7 @@ def root():
         "model_loaded": _model_loading_status["loaded"],
         "endpoints": {
             "webhook": "/webhook/tally",
+            "monday_checkin": "/monday",
             "health": "/health",
             "model_status": "/model-status",
             "memory_status": "/memory-status"

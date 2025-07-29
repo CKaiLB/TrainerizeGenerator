@@ -79,10 +79,26 @@ pip install -r requirements.txt
 
 2. Set up environment variables:
 ```bash
+# Core API Keys
 export OPENAI_API_KEY="your-openai-api-key"
 export QDRANT_URL="your-qdrant-url"
 export QDRANT_API_KEY="your-qdrant-api-key"
+
+# Trainerize API Configuration (Required)
+export TRAINERIZE_AUTH="your-trainerize-auth-token"
+export TRAINERIZE_FIND="your-trainerize-find-url"
+
+# Trainerize API Endpoints (Optional - with defaults)
+export TRAINERIZE_CLIENT_LIST_URL="https://api.trainerize.com/v03/user/getClientList"
+export TRAINERIZE_MASS_MESSAGE_URL="https://api.trainerize.com/v03/message/sendMass"
+export TRAINERIZE_PROGRAM_ADD="your-trainerize-program-add-url"
+export TRAINERIZE_WORKOUT_ADD="your-trainerize-workout-add-url"
+
+# Server Configuration
+export PORT="6000"
 ```
+
+**Note**: Copy `env_template.txt` to `.env` and fill in your actual values for easier configuration.
 
 ## Usage
 
