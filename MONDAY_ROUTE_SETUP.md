@@ -202,8 +202,41 @@ The route handles various error scenarios:
 
 - Uses existing Trainerize API authentication
 - Excludes trainer ID (23372308) from recipient list
+- **Excludes specific user ID (23544758) from weekly check-ins**
 - Validates client data before sending messages
 - Comprehensive error logging for monitoring
+
+## User Exclusion
+
+The Monday route automatically excludes specific users from receiving weekly check-in messages:
+
+### Excluded Users
+- **User ID 23544758** (Monica Ewing) - Automatically excluded from all weekly check-ins
+- **Trainer ID 23372308** - Excluded as the sender
+
+### Exclusion Behavior
+- **Normal Mode**: User 23544758 is filtered out from the client list before sending messages
+- **Test Mode**: If test mode targets user 23544758, a warning is returned instead of sending a message
+- **Logging**: All excluded users are logged for transparency
+- **Response**: Excluded users are listed in the response for monitoring
+
+### Example Response with Exclusions
+```json
+{
+  "status": "success",
+  "message": "Successfully sent weekly check-in messages to 3 clients",
+  "clients_count": 3,
+  "recipients": ["24292827", "24645450", "24313444"],
+  "client_names": {
+    "24292827": "Daniel Centeno",
+    "24645450": "Kai LB",
+    "24313444": "Robert Jones"
+  },
+  "excluded_users": ["Monica Ewing"],
+  "worker_pid": 12345,
+  "timestamp": "2025-07-22T19:30:00.000Z"
+}
+```
 
 ## Monitoring
 

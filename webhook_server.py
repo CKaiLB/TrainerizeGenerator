@@ -506,6 +506,7 @@ def send_weekly_checkin_messages(clients_data):
         # Extract user IDs and create recipient list
         recipients = []
         client_names = {}
+        excluded_users = []
         
         for user in users:
             user_id = user.get('id')
@@ -513,6 +514,12 @@ def send_weekly_checkin_messages(clients_data):
             last_name = user.get('lastName', '')
             
             if user_id and user_id != 23372308:  # Exclude the trainer ID
+                # Exclude specific user ID 23544758
+                if user_id == 23544758:
+                    excluded_users.append(f"{first_name} {last_name}".strip())
+                    logger.info(f"Excluding user {user_id} ({first_name} {last_name}) from weekly check-in")
+                    continue
+                
                 recipients.append(str(user_id))
                 client_names[str(user_id)] = f"{first_name} {last_name}".strip()
         
@@ -520,8 +527,12 @@ def send_weekly_checkin_messages(clients_data):
             logger.warning("No valid recipients found for weekly check-in")
             return {"status": "success", "message": "No valid recipients found", "clients_count": 0}
         
+        # Log excluded users for transparency
+        if excluded_users:
+            logger.info(f"Excluded users from weekly check-in: {excluded_users}")
+        
         # Create personalized message body
-        message_body = """Hey! Hope you had a great weekend. It's time for your quick weekly check-in so I can keep supporting you and making sure we're on track. Just reply directly to this message with your answers. short and honest is perfect!
+        message_body = """Hey [Client Name]! Hope you had a great weekend. It's time for your quick weekly check-in so I can keep supporting you and making sure we're on track. Just reply directly to this message with your answers. short and honest is perfect!
 
 How would you rate last week overall? (1–10)
 How many workouts did you complete?
@@ -566,6 +577,7 @@ Any questions, concerns, or feedback for me?"""
                 "clients_count": len(recipients),
                 "recipients": recipients,
                 "client_names": client_names,
+                "excluded_users": excluded_users,
                 "response": result
             }
         else:
@@ -802,6 +814,22 @@ def monday_weekly_checkin():
         if test_mode and target_user_id:
             logger.info(f"Test mode enabled - sending message only to {target_user_name} (ID: {target_user_id})")
             
+            # Check if the target user is in the excluded list
+            if target_user_id == "23544758":
+                logger.warning(f"Test mode: Target user {target_user_name} (ID: {target_user_id}) is in excluded list")
+                return jsonify({
+                    "status": "warning",
+                    "message": f"TEST MODE: Target user {target_user_name} (ID: {target_user_id}) is excluded from weekly check-ins",
+                    "clients_count": 0,
+                    "recipients": [],
+                    "client_names": {},
+                    "excluded_users": [target_user_name],
+                    "test_mode": True,
+                    "target_user": target_user_name,
+                    "worker_pid": current_pid,
+                    "timestamp": datetime.now().isoformat()
+                }), 200
+            
             # Create test client data structure
             test_clients_data = {
                 "users": [
@@ -827,6 +855,7 @@ def monday_weekly_checkin():
                 "clients_count": message_result.get("clients_count", 0),
                 "recipients": message_result.get("recipients", []),
                 "client_names": message_result.get("client_names", {}),
+                "excluded_users": message_result.get("excluded_users", []),
                 "test_mode": True,
                 "target_user": target_user_name,
                 "worker_pid": current_pid,
@@ -865,6 +894,7 @@ def monday_weekly_checkin():
             "clients_count": message_result.get("clients_count", 0),
             "recipients": message_result.get("recipients", []),
             "client_names": message_result.get("client_names", {}),
+            "excluded_users": message_result.get("excluded_users", []),
             "worker_pid": current_pid,
             "timestamp": datetime.now().isoformat()
         }
