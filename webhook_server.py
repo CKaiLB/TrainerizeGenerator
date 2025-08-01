@@ -532,7 +532,7 @@ def send_weekly_checkin_messages(clients_data):
             logger.info(f"Excluded users from weekly check-in: {excluded_users}")
         
         # Create personalized message body
-        message_body = """Hey [Client Name]! Hope you had a great weekend. It's time for your quick weekly check-in so I can keep supporting you and making sure we're on track. Just reply directly to this message with your answers. short and honest is perfect!
+        message_body = """Hey! Hope you had a great weekend. It's time for your quick weekly check-in so I can keep supporting you and making sure we're on track. Just reply directly to this message with your answers. short and honest is perfect!
 
 How would you rate last week overall? (1–10)
 How many workouts did you complete?
